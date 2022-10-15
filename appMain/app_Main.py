@@ -40,6 +40,7 @@ class appWindowMain:
             [sg.Listbox(values=stations, select_mode='extended', key='fac', size=(30, 6))],
         ]
         window = sg.Window(title="KOA Management Console", layout=layout, margins=(500, 500)).read()
+
     def getSensors(self):
         return appWindowMain.stations
 
