@@ -1,2 +1,2 @@
 # KOA-Management-Console
-PySimpleGUI: https://github.com/PySimpleGUI/PySimpleGUI
+PySimpleGUI: https://github.com/PySimpleGUI/PySimpleGUI#installing--
