@@ -4,6 +4,7 @@ import PySimpleGUI as sg
 
 class appWindowMain:
     _userName = ''
+    stations = ["Station 1", "Station 2", "Station 3"]
 
     def openLoginScreen(self):
         layout = [
@@ -31,12 +32,18 @@ class appWindowMain:
         print('Username: ' + _userName)
         print('Password: ' + values['Password'])
 
-    def openWelcomeScreen(self):
+    def openWelcomeScreen(self, stations):
+
         layout = [
             [sg.Text("KOA Management Console: Welcome.")],
+            [sg.Text("Select Weather Station:")],
+            [sg.Listbox(values=stations, select_mode='extended', key='fac', size=(30, 6))],
         ]
-        window = sg.Window(title="KOA Management Console", layout=layout)
+        window = sg.Window(title="KOA Management Console", layout=layout, margins=(500, 500)).read()
+    def getSensors(self):
+        return appWindowMain.stations
 
 
 windowMain = appWindowMain()
 windowMain.openLoginScreen()
+windowMain.openWelcomeScreen(windowMain.getSensors())
