@@ -37,7 +37,8 @@ class appWindowMain:
         layout = [
             [sg.Text("KOA Management Console: Welcome.")],
             [sg.Text("Select Weather Station:")],
-            [sg.Listbox(values=stations, select_mode='extended', key='fac', size=(30, 6))],
+            [sg.Listbox(values=stations, select_mode='SINGLE', key='fac', size=(30, 6),
+                        tooltip='Select a weather station to modify.')],
         ]
         window = sg.Window(title="KOA Management Console", layout=layout, margins=(500, 500)).read()
 
