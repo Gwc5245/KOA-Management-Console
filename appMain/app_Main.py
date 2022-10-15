@@ -10,10 +10,10 @@ class appWindowMain:
             [sg.Text('Password', size=(15, 1)), sg.InputText('', key='Password', password_char='*')],
             [sg.Button("OK")]
         ]
-        window = sg.Window(title="KOA Management Console Login", layout=layout2, margins=(500, 500)).read()
+        # window = sg.Window(title="KOA Management Console Login", layout=layout2, margins=(500, 500)).read()
+        window = sg.Window(title="KOA Management Console Login", layout=layout2)
 
         # label = tk.Label(text="KOA Management Console", fg="white", bg="black")
-
         # label.pack()
         # window.mainloop()
         while True:
