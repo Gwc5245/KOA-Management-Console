@@ -6,7 +6,7 @@ class appWindowMain:
     def openLoginScreen(self):
         layout2 = [
             [sg.Text("Please login to continue.")],
-            [sg.Text('Username', size=(15, 1)), sg.InputText('')],
+            [sg.Text('Username', size=(15, 1)), sg.InputText('', key='Username')],
             [sg.Text('Password', size=(15, 1)), sg.InputText('', key='Password', password_char='*')],
             [sg.Button("OK")]
         ]
@@ -24,6 +24,8 @@ class appWindowMain:
                 break
 
         window.close()
+        print('Username: ' + values['Username'])
+        print('Password: ' + values['Password'])
 
 
 windowMain = appWindowMain()
