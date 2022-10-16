@@ -1,6 +1,20 @@
-import PySimpleGUI as sg
+import hashlib
 
+import PySimpleGUI as sg
+import os
+
+path = os.path.abspath(__file__)
 sg.theme("reddit")
+
+
+def calcHash():
+    fname = os.path.abspath(__file__)
+    print("My path: " + fname)
+    hash_md5 = hashlib.md5()
+    with open(fname, "rb") as f:
+        for chunk in iter(lambda: f.read(2 ** 20), b""):
+            hash_md5.update(chunk)
+    return hash_md5.hexdigest()
 
 
 class appWindowMain:
@@ -8,6 +22,7 @@ class appWindowMain:
     stations = ["Station 1", "Station 2", "Station 3"]
 
     def openLoginScreen(self):
+        print("My hash - " + calcHash())
         layout = [
             [sg.Text("Please login to continue.")],
             [sg.Text('Username', size=(15, 1)), sg.InputText('', key='Username')],
