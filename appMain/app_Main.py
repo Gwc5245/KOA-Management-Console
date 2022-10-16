@@ -7,6 +7,7 @@ path = os.path.abspath(__file__)
 sg.theme("reddit")
 
 
+# Calculates the hash of the directory the python file is in.
 def calcHash():
     fname = os.path.abspath(__file__)
     print("My path: " + fname)
@@ -17,10 +18,12 @@ def calcHash():
     return hash_md5.hexdigest()
 
 
+# Management Console main class.
 class appWindowMain:
     _userName = ''
     stations = ["Station 1", "Station 2", "Station 3"]
 
+    # Opens the login screen that requests user's credentials.
     def openLoginScreen(self):
         print("My hash - " + calcHash())
         layout = [
@@ -48,6 +51,7 @@ class appWindowMain:
         print('Username: ' + self._userName)
         print('Password: ' + values['Password'])
 
+    # Opens the main dashboard that the user first sees after login, presenting to them a menu of options.
     def openWelcomeScreen(self, stations):
         username = (self.getCurrentUser())
         layout = [
@@ -71,9 +75,11 @@ class appWindowMain:
             elif values["-ADD-"]:
                 print("Add is selected.")
 
+    # Returns all the weather stations.
     def getSensors(self):
         return appWindowMain.stations
 
+    # Returns the current registered user utilizing the console.
     def getCurrentUser(self):
         return self._userName
 
