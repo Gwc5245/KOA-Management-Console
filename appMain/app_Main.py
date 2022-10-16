@@ -1,5 +1,7 @@
 import PySimpleGUI as sg
 
+sg.theme("reddit")
+
 
 class appWindowMain:
     _userName = ''
@@ -23,26 +25,42 @@ class appWindowMain:
             # End program if user closes window or
             # presses the OK button
             if event == "OK" or event == sg.WIN_CLOSED:
-                _userName = values['Username']
+                self._userName = values['Username']
                 break
 
         window.close()
         # print('Username: ' + values['Username'])
-        print('Username: ' + _userName)
+        print('Username: ' + self._userName)
         print('Password: ' + values['Password'])
 
     def openWelcomeScreen(self, stations):
-
+        username = (self.getCurrentUser())
         layout = [
-            [sg.Text("KOA Management Console: Welcome.")],
+            [sg.Text("Welcome to the Management Dashboard, " + username.capitalize() + '.')],
             [sg.Text("Select Weather Station:")],
             [sg.Listbox(values=stations, select_mode='SINGLE', key='fac', size=(30, 6),
                         tooltip='Select a weather station to modify.')],
+            [sg.Text("Select a menu option:")],
+            [sg.Radio('Add Station', "RADIO1", default=False, key="-ADD-")],
+            [sg.Radio('Modify Station', "RADIO1", default=False, key="-MODIFY-")],
+            [sg.Button("OK")],
         ]
-        window = sg.Window(title="KOA Management Console", layout=layout, margins=(500, 500)).read()
+        # margins=(500, 500)
+        window = sg.Window(title="KOA Management Console", layout=layout, )
+
+        print('Username: ' + self.getCurrentUser())
+        while True:
+            event, values = window.read()
+            if event == sg.WIN_CLOSED or event == "Exit":
+                break
+            elif values["-ADD-"]:
+                print("Add is selected.")
 
     def getSensors(self):
         return appWindowMain.stations
+
+    def getCurrentUser(self):
+        return self._userName
 
 
 windowMain = appWindowMain()
