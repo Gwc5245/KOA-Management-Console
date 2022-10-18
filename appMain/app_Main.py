@@ -3,8 +3,19 @@ import hashlib
 import PySimpleGUI as sg
 import os
 
+import pymongo as pymongo
+from pymongo.server_api import ServerApi
+
 path = os.path.abspath(__file__)
 sg.theme("reddit")
+client = pymongo.MongoClient("mongodb+srv://--REMOVED CREDENTIALS FOR SECURITY, DO NOT COMMIT PUSH WITH CREDENTIALS--.mongodb.net/?retryWrites=true&w=majority",
+                             server_api=ServerApi('1'))
+db = client.KOADB
+
+print(db.list_collection_names())
+print(client.server_info())
+
+print(db.test_collection.insert_one({"my_test field": "my test value"}))
 
 
 # Calculates the hash of the directory the python file is in.
