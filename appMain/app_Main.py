@@ -2,13 +2,14 @@ import hashlib
 
 import PySimpleGUI as sg
 import os
+import bcrypt
 
 import pymongo as pymongo
 from pymongo.server_api import ServerApi
 
 path = os.path.abspath(__file__)
 sg.theme("reddit")
-client = pymongo.MongoClient("mongodb+srv://--REMOVED CREDENTIALS FOR SECURITY, DO NOT COMMIT PUSH WITH CREDENTIALS--.mongodb.net/?retryWrites=true&w=majority",
+client = pymongo.MongoClient("mongodb+srv://user:tgw@cluster0.re3ie7p.mongodb.net/?retryWrites=true&w=majority",
                              server_api=ServerApi('1'))
 db = client.KOADB
 
@@ -94,8 +95,35 @@ class appWindowMain:
     def getCurrentUser(self):
         return self._userName
 
+    def genSalt(self):
+
+        # Open in "wb" mode to
+        # write a new file, or
+        # "ab" mode to append
+        if not os.path.isfile("saltFile.txt"):
+            with open("saltFile.txt", "wb") as binary_file:
+                # Write bytes to file
+                salt = bcrypt.gensalt()
+                print("Salt: ", salt)
+
+                binary_file.write(salt)
+                print("Wrote salt file in ", os.getcwd())
+        else:
+            print("Salt file found.")
+
+    # Retrieves the salt hash and returns the object.
+    def getSalt(self):
+        saltFile = open("saltFile.txt", "rb")
+        salt = saltFile.read()
+        saltFile.close()
+        # listSaltByte = list(salt)
+        # print("Retrieved salt from file. Salt: ", listSaltByte)
+        return salt
+
 
 windowMain = appWindowMain()
+windowMain.genSalt()
+windowMain.getSalt()
 windowMain.openLoginScreen()
 # TODO: needs user verification prior to launching.
 windowMain.openWelcomeScreen(windowMain.getSensors())
