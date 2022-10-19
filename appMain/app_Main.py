@@ -3,13 +3,14 @@ import hashlib
 import PySimpleGUI as sg
 import os
 import bcrypt
+import flask
 
 import pymongo as pymongo
 from pymongo.server_api import ServerApi
 
 path = os.path.abspath(__file__)
 sg.theme("reddit")
-client = pymongo.MongoClient("mongodb+srv://user:tgw@cluster0.re3ie7p.mongodb.net/?retryWrites=true&w=majority",
+client = pymongo.MongoClient("mongodb+srv://user:tgw@cluster0.re3ie7p.mongodb.net/?retryWrites=true&w=majority", TLS = True,
                              server_api=ServerApi('1'))
 db = client.KOADB
 
@@ -35,6 +36,8 @@ class appWindowMain:
     _userName = ''
     stations = ["Station 1", "Station 2", "Station 3"]
 
+    def genTestStations(self):
+        db.WeatherStations.insert_one({"Station 1": "Privet Road, Surrey"})
     # Opens the login screen that requests user's credentials.
     def openLoginScreen(self):
         print("My hash - " + calcHash())
@@ -42,7 +45,8 @@ class appWindowMain:
             [sg.Text("Please login to continue.")],
             [sg.Text('Username', size=(15, 1)), sg.InputText('', key='Username')],
             [sg.Text('Password', size=(15, 1)), sg.InputText('', key='Password', password_char='*')],
-            [sg.Button("OK")]
+            [sg.Button("OK")],
+            [sg.Button("No Account?")]
         ]
         # window = sg.Window(title="KOA Management Console Login", layout=layout2, margins=(500, 500)).read()
         window = sg.Window(title="KOA Management Console Login", layout=layout)
@@ -124,6 +128,7 @@ class appWindowMain:
 windowMain = appWindowMain()
 windowMain.genSalt()
 windowMain.getSalt()
+# windowMain.genTestStations()
 windowMain.openLoginScreen()
 # TODO: needs user verification prior to launching.
 windowMain.openWelcomeScreen(windowMain.getSensors())
