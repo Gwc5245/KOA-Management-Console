@@ -132,4 +132,3 @@ windowMain.getSalt()
 windowMain.openLoginScreen()
 # TODO: needs user verification prior to launching.
 windowMain.openWelcomeScreen(windowMain.getSensors())
-# t
