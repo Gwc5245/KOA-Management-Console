@@ -8,6 +8,8 @@ import flask
 import pymongo as pymongo
 from pymongo.server_api import ServerApi
 
+
+
 path = os.path.abspath(__file__)
 sg.theme("reddit")
 client = pymongo.MongoClient("mongodb+srv://user:tgw@cluster0.re3ie7p.mongodb.net/?retryWrites=true&w=majority", TLS = True,
