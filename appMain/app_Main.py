@@ -16,7 +16,7 @@ db = client.KOADB
 
 print(db.list_collection_names())
 print(client.server_info())
-
+# testing inserting collections into mongodb.
 print(db.test_collection.insert_one({"my_test field": "my test value"}))
 
 
