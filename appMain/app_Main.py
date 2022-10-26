@@ -3,23 +3,21 @@ import hashlib
 import PySimpleGUI as sg
 import os
 import bcrypt
-import flask
 
 import pymongo as pymongo
 from pymongo.server_api import ServerApi
 
-
-
 path = os.path.abspath(__file__)
 sg.theme("reddit")
-client = pymongo.MongoClient("mongodb+srv://user:tgw@cluster0.re3ie7p.mongodb.net/?retryWrites=true&w=majority", TLS = True,
+client = pymongo.MongoClient("mongodb+srv://user:user@cluster0.re3ie7p.mongodb.net/?retryWrites=true&w=majority",
+                             TLS=True,
                              server_api=ServerApi('1'))
 db = client.KOADB
 
 print(db.list_collection_names())
 print(client.server_info())
 # testing inserting collections into mongodb.
-print(db.test_collection.insert_one({"my_test field": "my test value"}))
+print(db.test_collection.insert_one({"my_test field": "my test value oct 24 2022"}))
 
 
 # Calculates the hash of the directory the python file is in.
@@ -40,6 +38,7 @@ class appWindowMain:
 
     def genTestStations(self):
         db.WeatherStations.insert_one({"Station 1": "Privet Road, Surrey"})
+
     # Opens the login screen that requests user's credentials.
     def openLoginScreen(self):
         print("My hash - " + calcHash())
