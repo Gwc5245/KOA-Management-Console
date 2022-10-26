@@ -1,5 +1,4 @@
 import hashlib
-
 import PySimpleGUI as sg
 import os
 import bcrypt
@@ -9,9 +8,10 @@ from pymongo.server_api import ServerApi
 
 path = os.path.abspath(__file__)
 sg.theme("reddit")
-client = pymongo.MongoClient("mongodb+srv://user:user@cluster0.re3ie7p.mongodb.net/?retryWrites=true&w=majority",
-                             TLS=True,
-                             server_api=ServerApi('1'))
+
+client = pymongo.MongoClient("mongodb+srv://<AWS access key>:<AWS secret key>@cluster0.re3ie7p.mongodb.net/?authSource=%24external&authMechanism=MONGODB-AWS&retryWrites=true&w=majority&authMechanismProperties=AWS_SESSION_TOKEN:<session token (for AWS IAM Roles)>", server_api=ServerApi('1'))
+
+
 db = client.KOADB
 
 print(db.list_collection_names())
@@ -133,4 +133,3 @@ windowMain.getSalt()
 windowMain.openLoginScreen()
 # TODO: needs user verification prior to launching.
 windowMain.openWelcomeScreen(windowMain.getSensors())
-# test
