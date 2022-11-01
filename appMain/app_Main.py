@@ -5,19 +5,18 @@ import os
 import bcrypt
 
 import pymongo as pymongo
+import us as us
 from pymongo.server_api import ServerApi
 
 path = os.path.abspath(__file__)
 sg.theme("reddit")
 
-client = pymongo.MongoClient("mongodb+srv://<AWS access key>:<AWS secret key>@cluster0.re3ie7p.mongodb.net/?authSource=%24external&authMechanism=MONGODB-AWS&retryWrites=true&w=majority", server_api=ServerApi('1'))
+# MongoDB connection
+client = pymongo.MongoClient("mongodb+srv://<AWS access key>:<AWS secret key>@cluster0.re3ie7p.mongodb.net/?authSource=%24external&authMechanism=MONGODB-AWS&retryWrites=true&w=majority&authMechanismProperties=AWS_SESSION_TOKEN:<session token (for AWS IAM Roles)>", server_api=ServerApi('1'))
 
 db = client.KOADB
-
 print("Collections: ", db.list_collection_names())
-print(client.server_info())
-# testing inserting collections into mongodb.
-print(db.test_collection.insert_one({"my_test field": "my test value oct 30 2022"}))
+print("MongoDB info: ", client.server_info())
 
 
 # Calculates the hash of the directory the python file is in.
@@ -68,13 +67,16 @@ class appWindowMain:
         print('Username: ' + self._userName)
         print('Password: ' + values['Password'])
 
+    state_names = [state.name for state in us.states.STATES_AND_TERRITORIES]
+
     def openAddStation(self):
         layout = [
             [sg.Text("Enter weather station info to add it to the database.")],
             [sg.Text('Station Name', size=(15, 1)), sg.InputText('', key='Station Name')],
             [sg.Text('Station Street', size=(15, 1)), sg.InputText('', key='Station Street')],
             [sg.Text('Station Municipality', size=(15, 1)), sg.InputText('', key='Station Municipality')],
-            [sg.Text('Station State', size=(15, 1)), sg.InputText('', key='Station State')],
+            [sg.Text('Station State', size=(15, 1)),
+             sg.Combo(self.state_names, default_value='Utah', key='Station State')],
             [sg.Text('Station Zip Code', size=(15, 1)), sg.InputText('', key='Station Zip Code')],
             [sg.Button("OK")],
             [sg.Button("Cancel")],
@@ -83,20 +85,15 @@ class appWindowMain:
         # window = sg.Window(title="KOA Management Console Login", layout=layout2, margins=(500, 500)).read()
         window = sg.Window(title="KOA Management Console Add Station", layout=layout)
 
-        # label = tk.Label(text="KOA Management Console", fg="white", bg="black")
-        # label.pack()
-        # window.mainloop()
         while True:
             event, values = window.read()
             # End program if user closes window or
             # presses the OK button
             if event == "OK":
-                # df = [values["Station Name"],values["Station Street"], values["Station Municipality"], values["Station State"], values["Station Zip Code"]]
-                # convert_dict = df.to_dict(orient="records")
                 weatherDict = {"name": values["Station Name"], "street": values["Station Street"],
                                "municipality": values["Station "
                                                       "Municipality"],
-                               "state": us_state_to_abbrev[values["Station State"]],
+                               "state": values["Station State"],
                                "zip code": values["Station Zip Code"]}
                 db.WeatherStations.insert_one(weatherDict)
                 break
@@ -131,7 +128,10 @@ class appWindowMain:
 
     # Returns all the weather stations.
     def getSensors(self):
-        return appWindowMain.stations
+        sensors = []
+        for x in db.WeatherStations.find({}, {"_id": 0, "name": 1}):
+            sensors.append(x["name"])
+        return sensors
 
     # Returns the current registered user utilizing the console.
     def getCurrentUser(self):
@@ -223,6 +223,9 @@ us_state_to_abbrev = {
     "United States Minor Outlying Islands": "UM",
     "U.S. Virgin Islands": "VI",
 }
+
+# invert the dictionary
+abbrev_to_us_state = dict(map(reversed, us_state_to_abbrev.items()))
 
 windowMain = appWindowMain()
 windowMain.genSalt()
