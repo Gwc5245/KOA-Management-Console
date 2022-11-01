@@ -12,7 +12,9 @@ path = os.path.abspath(__file__)
 sg.theme("reddit")
 
 # MongoDB connection
-client = pymongo.MongoClient("mongodb+srv://<AWS access key>:<AWS secret key>@cluster0.re3ie7p.mongodb.net/?authSource=%24external&authMechanism=MONGODB-AWS&retryWrites=true&w=majority&authMechanismProperties=AWS_SESSION_TOKEN:<session token (for AWS IAM Roles)>", server_api=ServerApi('1'))
+
+
+client = pymongo.MongoClient("mongodb+srv://<AWS access key>:<AWS secret key>@cluster0.re3ie7p.mongodb.net/?authSource=%24external&authMechanism=MONGODB-AWS&retryWrites=true&w=majority", server_api=ServerApi('1'))
 
 db = client.KOADB
 print("Collections: ", db.list_collection_names())
@@ -76,7 +78,7 @@ class appWindowMain:
             [sg.Text('Station Street', size=(15, 1)), sg.InputText('', key='Station Street')],
             [sg.Text('Station Municipality', size=(15, 1)), sg.InputText('', key='Station Municipality')],
             [sg.Text('Station State', size=(15, 1)),
-             sg.Combo(self.state_names, default_value='Utah', key='Station State')],
+             sg.Combo(self.state_names, default_value='Utah', key='Station State', readonly=True)],
             [sg.Text('Station Zip Code', size=(15, 1)), sg.InputText('', key='Station Zip Code')],
             [sg.Button("OK")],
             [sg.Button("Cancel")],
@@ -96,6 +98,7 @@ class appWindowMain:
                                "state": values["Station State"],
                                "zip code": values["Station Zip Code"]}
                 db.WeatherStations.insert_one(weatherDict)
+                self.refreshUI()
                 break
             if event == "Cancel":
                 window.close()
@@ -107,7 +110,7 @@ class appWindowMain:
         layout = [
             [sg.Text("Welcome to the Management Dashboard, " + username.capitalize() + '.')],
             [sg.Text("Select Weather Station:")],
-            [sg.Listbox(values=stations, select_mode='SINGLE', key='fac', size=(30, 6),
+            [sg.Listbox(values=stations, select_mode='SINGLE', key='stationsBox', size=(30, 6),
                         tooltip='Select a weather station to modify.')],
             [sg.Text("Select a menu option:")],
             [sg.Radio('Add Station', "RADIO1", default=False, key="-ADD-")],
@@ -115,11 +118,11 @@ class appWindowMain:
             [sg.Button("OK")],
         ]
         # margins=(500, 500)
-        window = sg.Window(title="KOA Management Console", layout=layout, )
+        self.welcomewindow = sg.Window(title="KOA Management Console", layout=layout, )
 
         print('Username: ' + self.getCurrentUser())
         while True:
-            event, values = window.read()
+            event, values = self.welcomewindow.read()
             if event == sg.WIN_CLOSED or event == "Exit":
                 break
             elif values["-ADD-"]:
@@ -162,6 +165,8 @@ class appWindowMain:
         # print("Retrieved salt from file. Salt: ", listSaltByte)
         return salt
 
+    def refreshUI(self):
+        self.welcomewindow['stationsBox'].update(self.getSensors())
 
 # Source: https://gist.github.com/rogerallen/1583593
 us_state_to_abbrev = {
