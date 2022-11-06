@@ -63,6 +63,8 @@ class appWindowMain:
             if event == "OK" or event == sg.WIN_CLOSED:
                 self._userName = values['Username']
                 break
+            if event == "No Account?":
+                self.openSignupScreen()
 
         window.close()
         # print('Username: ' + values['Username'])
@@ -129,6 +131,26 @@ class appWindowMain:
                 print("Add is selected.")
                 self.openAddStation()
 
+    def openSignupScreen(self):
+        layout = [
+            [sg.Text("Create a new account.")],
+            [sg.Text('Username', size=(15, 1)), sg.InputText('', key='Username')],
+            [sg.Text('Password', size=(15, 1)), sg.InputText('', key='Password', password_char='*')],
+            [sg.Text('Confirm password', size=(15, 1)), sg.InputText('', key='Password', password_char='*')],
+            [sg.Button("OK")],
+        ]
+        # margins=(500, 500)
+        self.signupWindow = sg.Window(title="KOA Create Account", layout=layout, )
+
+        print('Username: ' + self.getCurrentUser())
+        while True:
+            event, values = self.signupWindow.read()
+            # End program if user closes window or
+            # presses the OK button
+            if event == "OK" or event == sg.WIN_CLOSED:
+                self.signupWindow.close()
+                break
+
     # Returns all the weather stations.
     def getSensors(self):
         sensors = []
@@ -167,6 +189,7 @@ class appWindowMain:
 
     def refreshUI(self):
         self.welcomewindow['stationsBox'].update(self.getSensors())
+
 
 # Source: https://gist.github.com/rogerallen/1583593
 us_state_to_abbrev = {
@@ -228,9 +251,6 @@ us_state_to_abbrev = {
     "United States Minor Outlying Islands": "UM",
     "U.S. Virgin Islands": "VI",
 }
-
-# invert the dictionary
-abbrev_to_us_state = dict(map(reversed, us_state_to_abbrev.items()))
 
 windowMain = appWindowMain()
 windowMain.genSalt()
