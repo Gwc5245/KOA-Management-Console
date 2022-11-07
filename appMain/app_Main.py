@@ -37,9 +37,6 @@ class appWindowMain:
     _userName = ''
     stations = ["Station 1", "Station 2", "Station 3"]
 
-    def genTestStations(self):
-        db.WeatherStations.insert_one({"Station 1": "Privet Road, Surrey"})
-
     # Opens the login screen that requests user's credentials.
     def openLoginScreen(self):
         print("My hash - " + calcHash())
