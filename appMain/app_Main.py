@@ -130,13 +130,18 @@ class appWindowMain:
             elif values["-ADD-"]:
                 print("Add is selected.")
                 self.openAddStation()
+            elif values["-MODIFY-"]:
+                print("MODIFY is selected.")
 
     def openSignupScreen(self):
         layout = [
             [sg.Text("Create a new account.")],
             [sg.Text('Username', size=(15, 1)), sg.InputText('', key='Username')],
             [sg.Text('Password', size=(15, 1)), sg.InputText('', key='Password', password_char='*')],
-            [sg.Text('Confirm password', size=(15, 1)), sg.InputText('', key='Password', password_char='*')],
+            [sg.Text('Confirm password', size=(15, 1)), sg.InputText('', key='PasswordConf', password_char='*')],
+            [sg.Text('Firstname', size=(15, 1)), sg.InputText('', key='Firstname')],
+            [sg.Text('Lastname', size=(15, 1)), sg.InputText('', key='Lastname')],
+            [sg.Text('E-mail address', size=(15, 1)), sg.InputText('', key='Email')],
             [sg.Button("OK")],
         ]
         # margins=(500, 500)
@@ -147,7 +152,13 @@ class appWindowMain:
             event, values = self.signupWindow.read()
             # End program if user closes window or
             # presses the OK button
-            if event == "OK" or event == sg.WIN_CLOSED:
+
+            if event == "OK":
+                userDict = {"Username": values["Username"], "Password": self.get_hashed_password(values["Password"].encode('utf-8')),
+                            "Firstname": values["Firstname"],
+                            "Lastname": values["Lastname"],
+                            "E-mail address": values["Email"]}
+                db.ManagementUsers.insert_one(userDict)
                 self.signupWindow.close()
                 break
 
@@ -189,6 +200,15 @@ class appWindowMain:
 
     def refreshUI(self):
         self.welcomewindow['stationsBox'].update(self.getSensors())
+
+    def get_hashed_password(self,plain_text_password):
+        # Hash a password for the first time
+        #   (Using bcrypt, the salt is saved into the hash itself)
+        return bcrypt.hashpw(plain_text_password, bcrypt.gensalt())
+
+    def check_password(self, plain_text_password, hashed_password):
+        # Check hashed password. Using bcrypt, the salt is saved into the hash itself
+        return bcrypt.checkpw(plain_text_password, hashed_password)
 
 
 # Source: https://gist.github.com/rogerallen/1583593
