@@ -1,4 +1,6 @@
 import hashlib
+import re
+
 import PySimpleGUI as sg
 import os
 
@@ -57,8 +59,20 @@ class appWindowMain:
             event, values = window.read()
             # End program if user closes window or
             # presses the OK button
-            if event == "OK" or event == sg.WIN_CLOSED:
+            if event == "OK":
                 self._userName = values['Username']
+                user = values["Username"]
+                print("User I am searching for: ", user)
+                userEquate = db.ManagementUsers.find({'Username': user})
+                userEquateList = list(userEquate)
+                userEquateArray = userEquate.array()
+                print("User found: ", userEquateList)
+                if userEquate != [""]:
+                    print("Checking password...")
+                    print("PW ", userEquateArray.Password)
+                # verifyPW = self.check_password(values["Password"], )
+                break
+            if event == sg.WIN_CLOSED:
                 break
             if event == "No Account?":
                 self.openSignupScreen()
@@ -151,7 +165,8 @@ class appWindowMain:
             # presses the OK button
 
             if event == "OK":
-                userDict = {"Username": values["Username"], "Password": self.get_hashed_password(values["Password"].encode('utf-8')),
+                userDict = {"Username": values["Username"],
+                            "Password": self.get_hashed_password(values["Password"].encode('utf-8')),
                             "Firstname": values["Firstname"],
                             "Lastname": values["Lastname"],
                             "E-mail address": values["Email"]}
@@ -198,7 +213,7 @@ class appWindowMain:
     def refreshUI(self):
         self.welcomewindow['stationsBox'].update(self.getSensors())
 
-    def get_hashed_password(self,plain_text_password):
+    def get_hashed_password(self, plain_text_password):
         # Hash a password for the first time
         #   (Using bcrypt, the salt is saved into the hash itself)
         return bcrypt.hashpw(plain_text_password, bcrypt.gensalt())
