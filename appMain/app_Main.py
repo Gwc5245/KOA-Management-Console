@@ -17,8 +17,10 @@ sg.theme("reddit")
 # MongoDB connection
 
 
+client = pymongo.MongoClient(
+    "mongodb+srv://<AWS access key>:<AWS secret key>@cluster0.re3ie7p.mongodb.net/?authSource=%24external&authMechanism=MONGODB-AWS&retryWrites=true&w=majority",
+    server_api=ServerApi('1'))
 
-client = pymongo.MongoClient("mongodb+srv://<AWS access key>:<AWS secret key>@cluster0.re3ie7p.mongodb.net/?authSource=%24external&authMechanism=MONGODB-AWS&retryWrites=true&w=majority", server_api=ServerApi('1'))
 db = client.KOADB
 print("Collections: ", db.list_collection_names())
 print("MongoDB info: ", client.server_info())
@@ -205,15 +207,21 @@ class appWindowMain:
     def refreshUI(self):
         self.welcomewindow['stationsBox'].update(self.getSensors())
 
+    # Salt hashes a plaint text password (str) using bcrypt's hashpw method.
+    # Returns a Python "bytes" object.
     def get_hashed_password(self, plain_text_password):
         # Hash a password for the first time
         #   (Using bcrypt, the salt is saved into the hash itself)
         return bcrypt.hashpw(plain_text_password, bcrypt.gensalt())
 
+    # Validates a salt hashed password with a plaintext string.
+    # Returns a boolean.
     def check_password(self, plain_text_password, hashed_password):
         # Check hashed password. Using bcrypt, the salt is saved into the hash itself
         return bcrypt.checkpw(plain_text_password, hashed_password)
 
+    # Verifies a plaintext password with a salt hashed password (PyMongo cursor).
+    # Returns a boolean.
     def check_password_mongoDB(self, entry, userEquate):
         # userEquateList = list(userEquate)
 
@@ -235,6 +243,9 @@ class appWindowMain:
             print("PW: ", PWs, " Entry: ", entry.encode('utf-8'))
             verifyPW = self.check_password(entry.encode('utf-8'), PWs.encode('utf-8'))
             return verifyPW
+        else:
+            return False
+
 
 # Source: https://gist.github.com/rogerallen/1583593
 us_state_to_abbrev = {
