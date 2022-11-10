@@ -1,4 +1,5 @@
 import hashlib
+import json
 import re
 
 import PySimpleGUI as sg
@@ -16,8 +17,8 @@ sg.theme("reddit")
 # MongoDB connection
 
 
-client = pymongo.MongoClient("mongodb+srv://<AWS access key>:<AWS secret key>@cluster0.re3ie7p.mongodb.net/?authSource=%24external&authMechanism=MONGODB-AWS&retryWrites=true&w=majority", server_api=ServerApi('1'))
 
+client = pymongo.MongoClient("mongodb+srv://<AWS access key>:<AWS secret key>@cluster0.re3ie7p.mongodb.net/?authSource=%24external&authMechanism=MONGODB-AWS&retryWrites=true&w=majority", server_api=ServerApi('1'))
 db = client.KOADB
 print("Collections: ", db.list_collection_names())
 print("MongoDB info: ", client.server_info())
@@ -52,9 +53,6 @@ class appWindowMain:
         # window = sg.Window(title="KOA Management Console Login", layout=layout2, margins=(500, 500)).read()
         window = sg.Window(title="KOA Management Console Login", layout=layout)
 
-        # label = tk.Label(text="KOA Management Console", fg="white", bg="black")
-        # label.pack()
-        # window.mainloop()
         while True:
             event, values = window.read()
             # End program if user closes window or
@@ -64,13 +62,7 @@ class appWindowMain:
                 user = values["Username"]
                 print("User I am searching for: ", user)
                 userEquate = db.ManagementUsers.find({'Username': user})
-                userEquateList = list(userEquate)
-                userEquateArray = userEquate.array()
-                print("User found: ", userEquateList)
-                if userEquate != [""]:
-                    print("Checking password...")
-                    print("PW ", userEquateArray.Password)
-                # verifyPW = self.check_password(values["Password"], )
+                print("Verified? ", self.check_password_mongoDB(values["Password"], userEquate))
                 break
             if event == sg.WIN_CLOSED:
                 break
@@ -222,6 +214,27 @@ class appWindowMain:
         # Check hashed password. Using bcrypt, the salt is saved into the hash itself
         return bcrypt.checkpw(plain_text_password, hashed_password)
 
+    def check_password_mongoDB(self, entry, userEquate):
+        # userEquateList = list(userEquate)
+
+        # userEquateListStr = ('{} {}'.format(i, ''))
+        if userEquate != [""]:
+            userEquateListStr = []
+            records = dict((record['Password'], record) for record in userEquate)
+
+            for i in records:
+                userEquateListStr.append(i)
+                print("Value in list: ", userEquateListStr)
+            print("Checking password...")
+            # print("PW ", userEquateList["Password"])
+            PWs = ('{} {}'.format(userEquateListStr, ''))
+            print("Type PW: ", type(PWs))
+            PWs = repr(PWs)[4:-1]
+            PWs = PWs[:-3]
+            print("Type PW: ", type(PWs))
+            print("PW: ", PWs, " Entry: ", entry.encode('utf-8'))
+            verifyPW = self.check_password(entry.encode('utf-8'), PWs.encode('utf-8'))
+            return verifyPW
 
 # Source: https://gist.github.com/rogerallen/1583593
 us_state_to_abbrev = {
