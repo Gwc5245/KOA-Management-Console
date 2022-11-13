@@ -1,12 +1,8 @@
 import hashlib
-import json
-import re
-
-import PySimpleGUI as sg
 import os
 
+import PySimpleGUI as sg
 import bcrypt
-
 import pymongo as pymongo
 import us as us
 from pymongo.server_api import ServerApi
@@ -17,9 +13,7 @@ sg.theme("reddit")
 # MongoDB connection
 
 
-client = pymongo.MongoClient(
-    "mongodb+srv://<AWS access key>:<AWS secret key>@cluster0.re3ie7p.mongodb.net/?authSource=%24external&authMechanism=MONGODB-AWS&retryWrites=true&w=majority",
-    server_api=ServerApi('1'))
+client = pymongo.MongoClient("mongodb+srv://<AWS access key>:<AWS secret key>@cluster0.re3ie7p.mongodb.net/?authSource=%24external&authMechanism=MONGODB-AWS&retryWrites=true&w=majority", server_api=ServerApi('1'))
 
 db = client.KOADB
 print("Collections: ", db.list_collection_names())
@@ -40,13 +34,12 @@ def calcHash():
 # Management Console main class.
 class appWindowMain:
     _userName = ''
-    stations = ["Station 1", "Station 2", "Station 3"]
 
     # Opens the login screen that requests user's credentials.
     def openLoginScreen(self):
         print("My hash - " + calcHash())
         layout = [
-            [sg.Text("Please login to continue.")],
+            [sg.Text("Please login to continue.", key='title')],
             [sg.Text('Username', size=(15, 1)), sg.InputText('', key='Username')],
             [sg.Text('Password', size=(15, 1)), sg.InputText('', key='Password', password_char='*')],
             [sg.Button("OK")],
@@ -64,8 +57,14 @@ class appWindowMain:
                 user = values["Username"]
                 print("User I am searching for: ", user)
                 userEquate = db.ManagementUsers.find({'Username': user})
-                print("Verified? ", self.check_password_mongoDB(values["Password"], userEquate))
-                break
+                userAuthenticate = self.check_password_mongoDB(values["Password"], userEquate)
+                print("Verified? ", userAuthenticate)
+                if userAuthenticate:
+                    window.close()
+                    self.openWelcomeScreen(self.getSensors())
+                else:
+                    print("Invalid credentials entered.")
+                    window['title'].update(value='Invalid credentials were entered!', text_color='red')
             if event == sg.WIN_CLOSED:
                 break
             if event == "No Account?":
@@ -179,31 +178,6 @@ class appWindowMain:
     def getCurrentUser(self):
         return self._userName
 
-    def genSalt(self):
-
-        # Open in "wb" mode to
-        # write a new file, or
-        # "ab" mode to append
-        if not os.path.isfile("saltFile.txt"):
-            with open("saltFile.txt", "wb") as binary_file:
-                # Write bytes to file
-                salt = bcrypt.gensalt()
-                print("Salt: ", salt)
-
-                binary_file.write(salt)
-                print("Wrote salt file in ", os.getcwd())
-        else:
-            print("Salt file found.")
-
-    # Retrieves the salt hash and returns the object.
-    def getSalt(self):
-        saltFile = open("saltFile.txt", "rb")
-        salt = saltFile.read()
-        saltFile.close()
-        # listSaltByte = list(salt)
-        # print("Retrieved salt from file. Salt: ", listSaltByte)
-        return salt
-
     def refreshUI(self):
         self.welcomewindow['stationsBox'].update(self.getSensors())
 
@@ -223,27 +197,26 @@ class appWindowMain:
     # Verifies a plaintext password with a salt hashed password (PyMongo cursor).
     # Returns a boolean.
     def check_password_mongoDB(self, entry, userEquate):
-        # userEquateList = list(userEquate)
+        try:
+            if userEquate != [""]:
+                userEquateListStr = []
+                records = dict((record['Password'], record) for record in userEquate)
 
-        # userEquateListStr = ('{} {}'.format(i, ''))
-        if userEquate != [""]:
-            userEquateListStr = []
-            records = dict((record['Password'], record) for record in userEquate)
+                for i in records:
+                    userEquateListStr.append(i)
+                    print("Value in list: ", userEquateListStr)
+                print("Checking password...")
+                PWs = ('{} {}'.format(userEquateListStr, ''))
 
-            for i in records:
-                userEquateListStr.append(i)
-                print("Value in list: ", userEquateListStr)
-            print("Checking password...")
-            # print("PW ", userEquateList["Password"])
-            PWs = ('{} {}'.format(userEquateListStr, ''))
-            print("Type PW: ", type(PWs))
-            PWs = repr(PWs)[4:-1]
-            PWs = PWs[:-3]
-            print("Type PW: ", type(PWs))
-            print("PW: ", PWs, " Entry: ", entry.encode('utf-8'))
-            verifyPW = self.check_password(entry.encode('utf-8'), PWs.encode('utf-8'))
-            return verifyPW
-        else:
+                PWs = repr(PWs)[4:-1]
+                PWs = PWs[:-3]
+                print("PW: ", PWs, " Entry: ", entry.encode('utf-8'))
+                verifyPW = self.check_password(entry.encode('utf-8'), PWs.encode('utf-8'))
+                return verifyPW
+            else:
+                return False
+        except:
+            print("Exception caught when trying to verify credentials with MongoDB.")
             return False
 
 
@@ -308,10 +281,9 @@ us_state_to_abbrev = {
     "U.S. Virgin Islands": "VI",
 }
 
-windowMain = appWindowMain()
-windowMain.genSalt()
-windowMain.getSalt()
-# windowMain.genTestStations()
-windowMain.openLoginScreen()
-# TODO: needs user verification prior to launching.
-windowMain.openWelcomeScreen(windowMain.getSensors())
+try:
+    windowMain = appWindowMain()
+    windowMain.openLoginScreen()
+# windowMain.openWelcomeScreen(windowMain.getSensors())
+except:
+    print("Terminating program...")
