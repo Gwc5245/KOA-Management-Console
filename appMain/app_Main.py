@@ -13,7 +13,6 @@ sg.theme("reddit")
 # MongoDB connection
 
 
-
 client = pymongo.MongoClient("mongodb+srv://<AWS access key>:<AWS secret key>@cluster0.re3ie7p.mongodb.net/?authSource=%24external&authMechanism=MONGODB-AWS&retryWrites=true&w=majority", server_api=ServerApi('1'))
 
 db = client.KOADB
@@ -77,6 +76,68 @@ class appWindowMain:
         print('Password: ' + values['Password'])
 
     state_names = [state.name for state in us.states.STATES_AND_TERRITORIES]
+
+    def openSignupScreen(self):
+        layout = [
+            [sg.Text("Create a new account.")],
+            [sg.Text('Username', size=(15, 1)), sg.InputText('', key='Username')],
+            [sg.Text('Password', size=(15, 1)), sg.InputText('', key='Password', password_char='*')],
+            [sg.Text('Confirm password', size=(15, 1)), sg.InputText('', key='PasswordConf', password_char='*')],
+            [sg.Text('Firstname', size=(15, 1)), sg.InputText('', key='Firstname')],
+            [sg.Text('Lastname', size=(15, 1)), sg.InputText('', key='Lastname')],
+            [sg.Text('E-mail address', size=(15, 1)), sg.InputText('', key='Email')],
+            [sg.Button("OK")],
+        ]
+        # margins=(500, 500)
+        self.signupWindow = sg.Window(title="KOA Create Account", layout=layout, )
+
+        print('Username: ' + self.getCurrentUser())
+        while True:
+            event, values = self.signupWindow.read()
+            # End program if user closes window or
+            # presses the OK button
+
+            if event == "OK":
+                userDict = {"Username": values["Username"],
+                            "Password": self.get_hashed_password(values["Password"].encode('utf-8')),
+                            "Firstname": values["Firstname"],
+                            "Lastname": values["Lastname"],
+                            "E-mail address": values["Email"]}
+                db.ManagementUsers.insert_one(userDict)
+                self.signupWindow.close()
+                break
+            if event == sg.WIN_CLOSED:
+                break
+
+
+    # Opens the main dashboard that the user first sees after login, presenting to them a menu of options.
+    def openWelcomeScreen(self, stations):
+        username = (self.getCurrentUser())
+        layout = [
+            [sg.Text("Welcome to the Management Dashboard, " + username.capitalize() + '.')],
+            [sg.Text("Select Weather Station:")],
+            [sg.Listbox(values=stations, select_mode='SINGLE', key='stationsBox', size=(30, 6),
+                        tooltip='Select a weather station to modify.')],
+            [sg.Text("Select a menu option:")],
+            [sg.Radio('Add Station', "RADIO1", default=False, key="-ADD-")],
+            [sg.Radio('Modify Station', "RADIO1", default=False, key="-MODIFY-")],
+            [sg.Button("OK")],
+        ]
+        # margins=(500, 500)
+        self.welcomewindow = sg.Window(title="KOA Management Console", layout=layout, )
+
+        print('Username: ' + self.getCurrentUser())
+        while True:
+            event, values = self.welcomewindow.read()
+            if event == sg.WIN_CLOSED or event == "Exit":
+                break
+            elif values["-ADD-"]:
+                print("Add is selected.")
+                self.openAddStation()
+            elif values["-MODIFY-"]:
+                print("Weather Station selected: ", values['stationsBox'])
+                self.openModifyStation(values['stationsBox'][0])
+                print("MODIFY is selected.")
 
     def openAddStation(self):
         layout = [
@@ -162,65 +223,6 @@ class appWindowMain:
 
         window.close()
 
-    # Opens the main dashboard that the user first sees after login, presenting to them a menu of options.
-    def openWelcomeScreen(self, stations):
-        username = (self.getCurrentUser())
-        layout = [
-            [sg.Text("Welcome to the Management Dashboard, " + username.capitalize() + '.')],
-            [sg.Text("Select Weather Station:")],
-            [sg.Listbox(values=stations, select_mode='SINGLE', key='stationsBox', size=(30, 6),
-                        tooltip='Select a weather station to modify.')],
-            [sg.Text("Select a menu option:")],
-            [sg.Radio('Add Station', "RADIO1", default=False, key="-ADD-")],
-            [sg.Radio('Modify Station', "RADIO1", default=False, key="-MODIFY-")],
-            [sg.Button("OK")],
-        ]
-        # margins=(500, 500)
-        self.welcomewindow = sg.Window(title="KOA Management Console", layout=layout, )
-
-        print('Username: ' + self.getCurrentUser())
-        while True:
-            event, values = self.welcomewindow.read()
-            if event == sg.WIN_CLOSED or event == "Exit":
-                break
-            elif values["-ADD-"]:
-                print("Add is selected.")
-                self.openAddStation()
-            elif values["-MODIFY-"]:
-                print("Weather Station selected: ", values['stationsBox'])
-                self.openModifyStation(values['stationsBox'][0])
-                print("MODIFY is selected.")
-
-    def openSignupScreen(self):
-        layout = [
-            [sg.Text("Create a new account.")],
-            [sg.Text('Username', size=(15, 1)), sg.InputText('', key='Username')],
-            [sg.Text('Password', size=(15, 1)), sg.InputText('', key='Password', password_char='*')],
-            [sg.Text('Confirm password', size=(15, 1)), sg.InputText('', key='PasswordConf', password_char='*')],
-            [sg.Text('Firstname', size=(15, 1)), sg.InputText('', key='Firstname')],
-            [sg.Text('Lastname', size=(15, 1)), sg.InputText('', key='Lastname')],
-            [sg.Text('E-mail address', size=(15, 1)), sg.InputText('', key='Email')],
-            [sg.Button("OK")],
-        ]
-        # margins=(500, 500)
-        self.signupWindow = sg.Window(title="KOA Create Account", layout=layout, )
-
-        print('Username: ' + self.getCurrentUser())
-        while True:
-            event, values = self.signupWindow.read()
-            # End program if user closes window or
-            # presses the OK button
-
-            if event == "OK":
-                userDict = {"Username": values["Username"],
-                            "Password": self.get_hashed_password(values["Password"].encode('utf-8')),
-                            "Firstname": values["Firstname"],
-                            "Lastname": values["Lastname"],
-                            "E-mail address": values["Email"]}
-                db.ManagementUsers.insert_one(userDict)
-                self.signupWindow.close()
-                break
-
     # Returns all the weather stations.
     def getSensors(self):
         sensors = []
@@ -272,6 +274,7 @@ class appWindowMain:
         except:
             print("Exception caught when trying to verify credentials with MongoDB.")
             return False
+
     # Finds the document id within a collection in the MongoDB client "db".
     def getDocumentID(self, collectionName, fieldName, fieldEntry):
         collection = db[collectionName]
