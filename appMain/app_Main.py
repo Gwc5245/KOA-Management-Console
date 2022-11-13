@@ -13,6 +13,7 @@ sg.theme("reddit")
 # MongoDB connection
 
 
+
 client = pymongo.MongoClient("mongodb+srv://<AWS access key>:<AWS secret key>@cluster0.re3ie7p.mongodb.net/?authSource=%24external&authMechanism=MONGODB-AWS&retryWrites=true&w=majority", server_api=ServerApi('1'))
 
 db = client.KOADB
@@ -110,6 +111,57 @@ class appWindowMain:
                 window.close()
         window.close()
 
+    def openModifyStation(self, stationName):
+        print("Station being modified: ", stationName)
+
+        station = db.WeatherStations.find_one({'name': stationName})
+        print("Found document in DB: ", station)
+        print("Full Document: ", list(station))
+
+        mongo_id = self.getDocumentID("WeatherStations", "name", stationName)
+        print("With Object ID: ", mongo_id)
+
+        layout = [
+            [sg.Text("Modify weather station information.")],
+            [sg.Text('Station Name', size=(15, 1)),
+             sg.InputText(db.WeatherStations.find_one({"name": stationName})["name"], key='Station Name')],
+            [sg.Text('Station Street', size=(15, 1)),
+             sg.InputText(db.WeatherStations.find_one({"name": stationName})["street"], key='Station Street')],
+            [sg.Text('Station Municipality', size=(15, 1)),
+             sg.InputText(db.WeatherStations.find_one({"name": stationName})["municipality"],
+                          key='Station Municipality')],
+            [sg.Text('Station State', size=(15, 1)),
+             sg.Combo(self.state_names, default_value=db.WeatherStations.find_one({"name": stationName})["state"],
+                      key='Station State', readonly=True)],
+            [sg.Text('Station Zip Code', size=(15, 1)),
+             sg.InputText(db.WeatherStations.find_one({"name": stationName})["zip code"], key='Station Zip Code')],
+            [sg.Button("OK")],
+            [sg.Button("Cancel")],
+
+        ]
+
+        # window = sg.Window(title="KOA Management Console Login", layout=layout2, margins=(500, 500)).read()
+        window = sg.Window(title="KOA Management Console Add Station", layout=layout)
+
+        while True:
+            event, values = window.read()
+            # End program if user closes window or
+            # presses the OK button
+            if event == "OK":
+                weatherDict = {"name": values["Station Name"], "street": values["Station Street"],
+                               "municipality": values["Station "
+                                                      "Municipality"],
+                               "state": values["Station State"],
+                               "zip code": values["Station Zip Code"]}
+                db.WeatherStations.update_one({'_id': mongo_id}, {"$set": weatherDict}, upsert=False)
+                self.refreshUI()
+                break
+            if event == "Cancel" or event == sg.WIN_CLOSED:
+                window.close()
+                break
+
+        window.close()
+
     # Opens the main dashboard that the user first sees after login, presenting to them a menu of options.
     def openWelcomeScreen(self, stations):
         username = (self.getCurrentUser())
@@ -135,6 +187,8 @@ class appWindowMain:
                 print("Add is selected.")
                 self.openAddStation()
             elif values["-MODIFY-"]:
+                print("Weather Station selected: ", values['stationsBox'])
+                self.openModifyStation(values['stationsBox'][0])
                 print("MODIFY is selected.")
 
     def openSignupScreen(self):
@@ -218,6 +272,11 @@ class appWindowMain:
         except:
             print("Exception caught when trying to verify credentials with MongoDB.")
             return False
+    # Finds the document id within a collection in the MongoDB client "db".
+    def getDocumentID(self, collectionName, fieldName, fieldEntry):
+        collection = db[collectionName]
+        cursor = collection.find_one({fieldName: fieldEntry})
+        return db.WeatherStations.find_one({fieldName: fieldEntry})["_id"]
 
 
 # Source: https://gist.github.com/rogerallen/1583593
@@ -285,5 +344,6 @@ try:
     windowMain = appWindowMain()
     windowMain.openLoginScreen()
 # windowMain.openWelcomeScreen(windowMain.getSensors())
-except:
+except Exception as E:
+    print(E)
     print("Terminating program...")
