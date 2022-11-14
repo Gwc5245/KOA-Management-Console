@@ -71,9 +71,6 @@ class appWindowMain:
                 self.openSignupScreen()
 
         window.close()
-        # print('Username: ' + values['Username'])
-        print('Username: ' + self._userName)
-        print('Password: ' + values['Password'])
 
     state_names = [state.name for state in us.states.STATES_AND_TERRITORIES]
 
@@ -132,12 +129,11 @@ class appWindowMain:
             if event == sg.WIN_CLOSED or event == "Exit":
                 break
             elif values["-ADD-"]:
-                print("Add is selected.")
                 self.openAddStation()
             elif values["-MODIFY-"]:
                 print("Weather Station selected: ", values['stationsBox'])
                 self.openModifyStation(values['stationsBox'][0])
-                print("MODIFY is selected.")
+
 
     def openAddStation(self):
         layout = [
@@ -279,7 +275,7 @@ class appWindowMain:
     def getDocumentID(self, collectionName, fieldName, fieldEntry):
         collection = db[collectionName]
         cursor = collection.find_one({fieldName: fieldEntry})
-        return db.WeatherStations.find_one({fieldName: fieldEntry})["_id"]
+        return cursor["_id"]
 
 
 # Source: https://gist.github.com/rogerallen/1583593
