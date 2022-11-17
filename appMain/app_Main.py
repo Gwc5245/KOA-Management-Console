@@ -1,13 +1,12 @@
 import hashlib
 import os
 
-import PySimpleGUI as sg
+import PySimpleGUIWeb as sg
 import bcrypt
 import pymongo as pymongo
 import us as us
 from pymongo.server_api import ServerApi
 
-path = os.path.abspath(__file__)
 sg.theme("reddit")
 
 # MongoDB connection
@@ -106,7 +105,6 @@ class appWindowMain:
             if event == sg.WIN_CLOSED:
                 break
 
-
     # Opens the main dashboard that the user first sees after login, presenting to them a menu of options.
     def openWelcomeScreen(self, stations):
         username = (self.getCurrentUser())
@@ -133,7 +131,6 @@ class appWindowMain:
             elif values["-MODIFY-"]:
                 print("Weather Station selected: ", values['stationsBox'])
                 self.openModifyStation(values['stationsBox'][0])
-
 
     def openAddStation(self):
         layout = [
