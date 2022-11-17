@@ -1,12 +1,13 @@
 import hashlib
 import os
-
-import PySimpleGUIWeb as sg
+from tkinter import *
+import PySimpleGUI as sg
 import bcrypt
 import pymongo as pymongo
 import us as us
 from pymongo.server_api import ServerApi
 
+path = os.path.abspath(__file__)
 sg.theme("reddit")
 
 # MongoDB connection
@@ -32,11 +33,18 @@ def calcHash():
 
 # Management Console main class.
 class appWindowMain:
+    def __init__(self):
+        super().__init__()
     _userName = ''
+    menu = ['',
+            ['Show Window', 'Hide Window', '---', '!Disabled Item', 'Change Icon', ['Happy', 'Sad', 'Plain'], 'Exit']]
+    tooltip = 'KOA Management Console'
+
+    tray = sg.SystemTray(menu, tooltip=tooltip)
 
     # Opens the login screen that requests user's credentials.
     def openLoginScreen(self):
-        print("My hash - " + calcHash())
+
         layout = [
             [sg.Text("Please login to continue.", key='title')],
             [sg.Text('Username', size=(15, 1)), sg.InputText('', key='Username')],
@@ -64,6 +72,8 @@ class appWindowMain:
                 else:
                     print("Invalid credentials entered.")
                     window['title'].update(value='Invalid credentials were entered!', text_color='red')
+                    self.tray.show_message("Warning!", "You entered invalid credentials!")
+
             if event == sg.WIN_CLOSED:
                 break
             if event == "No Account?":
@@ -335,11 +345,5 @@ us_state_to_abbrev = {
     "United States Minor Outlying Islands": "UM",
     "U.S. Virgin Islands": "VI",
 }
-
-try:
-    windowMain = appWindowMain()
-    windowMain.openLoginScreen()
-# windowMain.openWelcomeScreen(windowMain.getSensors())
-except Exception as E:
-    print(E)
-    print("Terminating program...")
+windowMain = appWindowMain()
+windowMain.openLoginScreen()
