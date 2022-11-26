@@ -1,14 +1,23 @@
 import configparser
 import hashlib
+import logging
 import os
 import shutil
+from threading import Thread
 
+import remi.gui as gui
+from remi import start, App
 import PySimpleGUI as sgd
 import PySimpleGUIWeb as sg
+
 import bcrypt
 import pymongo as pymongo
 import us as us
 from pymongo.server_api import ServerApi
+from remi.server import StandaloneServer, Server
+from flask import Flask
+
+app = Flask(__name__)
 
 configFile = ()
 cfg = configparser.ConfigParser()
@@ -27,6 +36,9 @@ db = client.KOADB
 
 # print("Collections: ", db.list_collection_names())
 # print("MongoDB info: ", client.server_info())
+
+def run():
+    app.run(debug=True, port=port, host="0.0.0.0")
 
 
 def genConfigFile(db_url, in_port):
@@ -123,7 +135,20 @@ def checkConfig():
     print("Client connected:", client)
     return True
 
+def startMongo(client_connection):
+    print("Starting MongoDB")
 
+    print("Client information:", client_connection)
+    clientAppMain = pymongo.MongoClient(
+        client_connection,
+        server_api=ServerApi('1'))
+    db = clientAppMain.KOADB
+
+    print("Databases:", clientAppMain.list_databases())
+    print("Client", clientAppMain)
+    print("Database", db)
+    threadLogin()
+    print("\n!!!!!!!!! Thread started.")
 def configurator(fileLocated):
     print("-configurator-")
     cfg.read('KOAConsole.ini')
@@ -133,11 +158,36 @@ def configurator(fileLocated):
     if fileLocated and checkConfig():
         print("Launching main application.")
         clientPass = cfg.get("MongoDB Configuration", "client_connection")
-        windowMain = appWindowMain(clientPass)
-        windowMain.openLoginScreen()
+        startMongo(clientPass)
+
+def startMongoNoCheck():
+
+    cfg.read('KOAConsole.ini')
+    print("Launching main application.")
+    clientPass = cfg.get("MongoDB Configuration", "client_connection")
+    startMongo(clientPass)
+
+def start(main_gui_class, **kwargs):
+    """This method starts the webserver with a specific App subclass."""
+    debug = kwargs.pop('debug', False)
+    standalone = kwargs.pop('standalone', False)
+
+    logging.basicConfig(level=logging.DEBUG if debug else logging.INFO,
+                        format='%(name)-16s %(levelname)-8s %(message)s')
+    logging.getLogger('remi').setLevel(
+        level=logging.DEBUG if debug else logging.INFO)
+
+    if standalone:
+        s = StandaloneServer(main_gui_class, start=True, **kwargs)
+    else:
+        s = Server(main_gui_class, multiple_instance=True, start=True, **kwargs)
 
 
-def parseConfiguration(passToConfigurator):
+def autoParse():
+    parseConfiguration(False)
+
+
+def parseConfiguration():
     print("-parseConfiguration-")
     try:
 
@@ -152,7 +202,7 @@ def parseConfiguration(passToConfigurator):
         elif config and checkConfig():
             print("2")
             configurator(True)
-        elif not passToConfigurator:
+        else:
             config = cfg.read('KOAConsole.ini')
             cfg.get("client_connection", "port")
 
@@ -175,327 +225,333 @@ def calcHash():
 
 
 # Management Console main class.
-class appWindowMain():
 
-    def __init__(self, client_connection):
-        print("Client information:", client_connection)
-        self.clientAppMain = pymongo.MongoClient(
-            client_connection,
-            server_api=ServerApi('1'))
-        db = self.clientAppMain.KOADB
-        self.welcomewindow = ()
-        print("Databases:", self.clientAppMain.list_databases())
-        print("Client", self.clientAppMain)
-        print("Database", db)
-        super().__init__()
 
-    _userName = ''
-    menu = ['',
-            ['Show Window', 'Hide Window', '---', '!Disabled Item', 'Change Icon', ['Happy', 'Sad', 'Plain'], 'Exit']]
-    tooltip = 'KOA Management Console'
 
-    tray = sgd.SystemTray(menu, tooltip=tooltip)
 
-    # Opens the login screen that requests user's credentials.
-    def openLoginScreen(self):
+_userName = ''
+menu = ['',
+        ['Show Window', 'Hide Window', '---', '!Disabled Item', 'Change Icon', ['Happy', 'Sad', 'Plain'], 'Exit']]
+tooltip = 'KOA Management Console'
 
-        layout = [
-            [sg.Text("Please login to continue.", key='title')],
-            [sg.Text('Username', size=(15, 1)), sg.InputText('', key='Username')],
-            [sg.Text('Password', size=(15, 1)), sg.InputText('', key='Password', password_char='*')],
-            [sg.Button("OK")],
-            [sg.Button("No Account?")]
-        ]
-        # window = sg.Window(title="KOA Management Console Login", layout=layout2, margins=(500, 500)).read()
-        window = sg.Window(title="KOA Management Console Login", layout=layout, web_port=port)
+tray = sgd.SystemTray(menu, tooltip=tooltip)
 
-        while True:
-            event, values = window.read()
-            # End program if user closes window or
-            # presses the OK button
-            if event == "OK":
-                self._userName = values['Username']
-                user = values["Username"]
-                print("User I am searching for: ", user)
-                print("Users", self.clientAppMain.KOADB.ManagementUsers.find({}))
-                userEquate = self.clientAppMain.KOADB.ManagementUsers.find({'Username': user})
-                print("User Cursor: ", userEquate)
-                print("Entered pass:", values["Password"])
-                userAuthenticate = self.check_password_mongoDB(values["Password"], userEquate)
-                print("Verified? ", userAuthenticate)
-                if userAuthenticate:
-                    self.openWelcomeScreen(self.getSensors())
-                else:
-                    print("Invalid credentials entered.")
-                    window['title'].update(value='Invalid credentials were entered!', text_color='red')
-                    self.tray.show_message("Warning!", "You entered invalid credentials!")
+def threadLogin():
+    thread = Thread(target=openLoginScreen())
+    print("Thread created.")
+    thread.start()
 
-            if event == sg.WIN_CLOSED:
-                break
-            if event == "No Account?":
-                self.openSignupScreen()
+# Opens the login screen that requests user's credentials.
 
-        window.close()
+@app.route('/login',methods=["GET"])
 
-    state_names = [state.name for state in us.states.STATES_AND_TERRITORIES]
+def openLoginScreen():
 
-    def openSignupScreen(self):
+    layout = [
+        [sg.Text("Please login to continue.", key='title')],
+        [sg.Text('Username', size=(15, 1)), sg.InputText('', key='Username')],
+        [sg.Text('Password', size=(15, 1)), sg.InputText('', key='Password', password_char='*')],
+        [sg.Button("OK")],
+        [sg.Button("No Account?")]
+    ]
+    # window = sg.Window(title="KOA Management Console Login", layout=layout2, margins=(500, 500)).read()
+    window = sg.Window(title="KOA Management Console Login", layout=layout, disable_close=True, web_port=port,
+    web_start_browser=True, web_multiple_instance=True)
 
-        layout = [
-            [sg.Text("Create a new account.")],
-            [sg.Text('Username', size=(15, 1)), sg.InputText('', key='Username')],
-            [sg.Text('Password', size=(15, 1)), sg.InputText('', key='Password', password_char='*')],
-            [sg.Text('Confirm password', size=(15, 1)), sg.InputText('', key='PasswordConf', password_char='*')],
-            [sg.Text('Firstname', size=(15, 1)), sg.InputText('', key='Firstname')],
-            [sg.Text('Lastname', size=(15, 1)), sg.InputText('', key='Lastname')],
-            [sg.Text('E-mail address', size=(15, 1)), sg.InputText('', key='Email')],
-            [sg.Button("OK")],
-        ]
-        # margins=(500, 500)
-        self.signupWindow = sg.Window(title="KOA Create Account", layout=layout, )
-
-        print('Username: ' + self.getCurrentUser())
-        while True:
-            event, values = self.signupWindow.read()
-            # End program if user closes window or
-            # presses the OK button
-
-            if event == "OK":
-                userDict = {"Username": values["Username"],
-                            "Password": self.get_hashed_password(values["Password"].encode('utf-8')),
-                            "Firstname": values["Firstname"],
-                            "Lastname": values["Lastname"],
-                            "E-mail address": values["Email"]}
-                db.ManagementUsers.insert_one(userDict)
-
-                break
-            if event == sg.WIN_CLOSED:
-                break
-
-    # Opens the main dashboard that the user first sees after login, presenting to them a menu of options.
-    def openWelcomeScreen(self, stations):
-        print("-openWelcomeScreen-")
-        items = ["Add Station", "Modify Station", "Remove Station"]
-
-        username = (self.getCurrentUser())
-
-        layout = [
-            [sg.Text("Welcome to the Management Dashboard, " + username.capitalize() + '.')],
-            [sg.Text("Select Weather Station:")],
-            [sg.Listbox(values=stations, select_mode='SINGLE', key='stationsBox', size=(30, 6),
-                        tooltip='Select a weather station to modify.')],
-            [sg.Text("Select a menu option:")],
-            #    [sg.Radio('Add Station', "RADIO1", default=False, key="-ADD-")],
-            #    [sg.Radio('Modify Station', "RADIO1", default=False, key="-MODIFY-")],
-            [sg.InputCombo(items, size=(20, 1), key="stationAction_combobox")],
-            [sg.Button("OK")],
-        ]
-        # margins=(500, 500)
-        self.welcomewindow = sg.Window(title="KOA Management Console", layout=layout, )
-        self.welcomewindow.FindElement('stationAction_combobox').Update('')
-
-        print('Username: ' + self.getCurrentUser())
-        while True:
-            print("Listening...")
-            event, values = self.welcomewindow.read()
-            if event == sg.WIN_CLOSED or event == "Exit":
-                self._stop_update_flag = True
-                for ws in self.websockets:
-                    ws.close()
-                break
-            elif values["stationAction_combobox"]:
-
-                if values["stationAction_combobox"] == "Add Station":
-                    self.openAddStation()
-                elif values["stationAction_combobox"] == "Modify Station":
-                    print("Weather Station selected: ", values['stationsBox'])
-                    self.openModifyStation(values['stationsBox'][0])
-
-    def openAddStation(self):
-        print("-openAddStation-")
-        layout = [
-            [sg.Text("Enter weather station info to add it to the database.")],
-            [sg.Text('Station Name', size=(15, 1)), sg.InputText('', key='Station Name')],
-            [sg.Text('Station Street', size=(15, 1)), sg.InputText('', key='Station Street')],
-            [sg.Text('Station Municipality', size=(15, 1)), sg.InputText('', key='Station Municipality')],
-            [sg.Text('Station State', size=(15, 1)),
-             sg.Combo(self.state_names, default_value='Utah', key='Station State', readonly=True)],
-            [sg.Text('Station Zip Code', size=(15, 1)), sg.InputText('', key='Station Zip Code')],
-            [sg.Button("OK")],
-            [sg.Button("Cancel")],
-
-        ]
-        # window = sg.Window(title="KOA Management Console Login", layout=layout2, margins=(500, 500)).read()
-        window = sg.Window(title="KOA Management Console Add Station", layout=layout)
-
-        while True:
-            event, values = window.read()
-            # End program if user closes window or
-            # presses the OK button
-            if event == "OK":
-                weatherDict = {"name": values["Station Name"], "street": values["Station Street"],
-                               "municipality": values["Station "
-                                                      "Municipality"],
-                               "state": values["Station State"],
-                               "zip code": values["Station Zip Code"]}
-                self.clientAppMain.KOADB.WeatherStations.insert_one(weatherDict)
-
-                break
-            if event == "Cancel":
-                self.openWelcomeScreen(self.getSensors())
-        print("-Opening Welcome Screen-")
-        self.openWelcomeScreen(self.getSensors())
-
-    def openModifyStation(self, stationName):
-        print("-openModifyStation-")
-        print("Station being modified: ", stationName)
-
-        station = self.clientAppMain.KOADB.WeatherStations.find_one({'name': stationName})
-        print("Found document in DB: ", station)
-        print("Full Document: ", list(station))
-
-        mongo_id = self.getDocumentID("WeatherStations", "name", stationName)
-        print("With Object ID: ", mongo_id)
-
-        layout = [
-            [sg.Text("Modify weather station information.")],
-            [sg.Text('Station Name', size=(15, 1)),
-             sg.InputText(self.clientAppMain.KOADB.WeatherStations.find_one({"name": stationName})["name"],
-                          key='Station Name')],
-            [sg.Text('Station Street', size=(15, 1)),
-             sg.InputText(self.clientAppMain.KOADB.WeatherStations.find_one({"name": stationName})["street"],
-                          key='Station Street')],
-            [sg.Text('Station Municipality', size=(15, 1)),
-             sg.InputText(self.clientAppMain.KOADB.WeatherStations.find_one({"name": stationName})["municipality"],
-                          key='Station Municipality')],
-            [sg.Text('Station State', size=(15, 1)),
-             sg.Combo(self.state_names,
-                      default_value=self.clientAppMain.KOADB.WeatherStations.find_one({"name": stationName})["state"],
-                      key='Station State', readonly=True)],
-            [sg.Text('Station Zip Code', size=(15, 1)),
-             sg.InputText(self.clientAppMain.KOADB.WeatherStations.find_one({"name": stationName})["zip code"],
-                          key='Station Zip Code')],
-            [sg.Button("OK")],
-            [sg.Button("Cancel")],
-
-        ]
-
-        # window = sg.Window(title="KOA Management Console Login", layout=layout2, margins=(500, 500)).read()
-        window = sg.Window(title="KOA Management Console Add Station", layout=layout)
-
-        while True:
-            event, values = window.read()
-            # End program if user closes window or
-            # presses the OK button
-            if event == "OK":
-                if values["Station Name"] == '':
-                    values["Station Name"] = self.clientAppMain.KOADB.WeatherStations.find_one({"name": stationName})[
-                        "name"]
-                if values["Station Street"] == '':
-                    values["Station Street"] = self.clientAppMain.KOADB.WeatherStations.find_one({"name": stationName})[
-                        "street"]
-                if values["Station Municipality"] == '':
-                    values["Station Municipality"] = \
-                        self.clientAppMain.KOADB.WeatherStations.find_one({"name": stationName})["municipality"]
-                if values["Station Zip Code"] == '':
-                    values["Station Zip Code"] = \
-                        self.clientAppMain.KOADB.WeatherStations.find_one({"name": stationName})["zip code"]
-
-                weatherDict = {"name": values["Station Name"], "street": values["Station Street"],
-                               "municipality": values["Station "
-                                                      "Municipality"],
-                               "state": values["Station State"],
-                               "zip code": values["Station Zip Code"]}
-                print("Station Updated:", weatherDict)
-                self.clientAppMain.KOADB.WeatherStations.update_one({'_id': mongo_id}, {"$set": weatherDict},
-                                                                    upsert=False)
-
-                break
-            if event == "Cancel" or event == sg.WIN_CLOSED:
-                self.openWelcomeScreen(self.getSensors())
-                break
-
-        self.openWelcomeScreen(self.getSensors())
-
-    # Returns all the weather stations.
-    def getSensors(self):
-        print("-getSensors-")
-        sensors = []
-        for x in self.clientAppMain.KOADB.WeatherStations.find({}, {"_id": 0, "name": 1}):
-            sensors.append(x["name"])
-        return sensors
-
-    # Returns the current registered user utilizing the console.
-    def getCurrentUser(self):
-        print("-getCurrentUser-")
-        return self._userName
-
-    # Salt hashes a plaint text password (str) using bcrypt's hashpw method.
-    # Returns a Python "bytes" object.
-    def get_hashed_password(self, plain_text_password):
-        # Hash a password for the first time
-        #   (Using bcrypt, the salt is saved into the hash itself)
-        return bcrypt.hashpw(plain_text_password, bcrypt.gensalt())
-
-    # Validates a salt hashed password with a plaintext string.
-    # Returns a boolean.
-    def check_password(self, plain_text_password, hashed_password):
-        # Check hashed password. Using bcrypt, the salt is saved into the hash itself
-        return bcrypt.checkpw(plain_text_password, hashed_password)
-
-    # Verifies a plaintext password with a salt hashed password (PyMongo cursor).
-    # Returns a boolean.
-    def check_password_mongoDB(self, entry, userEquate):
-        print("-check_password_mongoDB-")
-        try:
-
-            if userEquate != [""]:
-
-                userEquateListStr = []
-                records = dict((record['Password'], record) for record in userEquate)
-
-                print("Records:", records)
-
-                for i in records:
-                    userEquateListStr.append(i)
-                    print("Value in list: ", userEquateListStr)
-                print("Checking password...")
-                print("userEquateListStr:", userEquateListStr)
-                PWs = ('{} {}'.format(userEquateListStr, ''))
-
-                PWs = repr(PWs)[4:-1]
-                PWs = PWs[:-3]
-                print("PW: ", PWs, " Entry: ", entry.encode('utf-8'))
-                verifyPW = self.check_password(entry.encode('utf-8'), PWs.encode('utf-8'))
-                return verifyPW
+    while True:
+        event, values = window.read()
+        # End program if user closes window or
+        # presses the OK button
+        if event == "OK":
+            _userName = values['Username']
+            user = values["Username"]
+            print("User I am searching for: ", user)
+            print("Users", clientAppMain.KOADB.ManagementUsers.find({}))
+            userEquate = clientAppMain.KOADB.ManagementUsers.find({'Username': user})
+            print("User Cursor: ", userEquate)
+            print("Entered pass:", values["Password"])
+            userAuthenticate = check_password_mongoDB(values["Password"], userEquate)
+            print("Verified? ", userAuthenticate)
+            if userAuthenticate:
+                print("Starting Login Thread...")
+                thread = Thread(target=openWelcomeScreen(getSensors()))
+                thread.start()
             else:
-                return False
-        except Exception as e:
-            print("Exception caught when trying to verify credentials with MongoDB.")
-            print("Exception message:", e)
+                print("Invalid credentials entered.")
+                window['title'].update(value='Invalid credentials were entered!', text_color='red')
+                tray.show_message("Warning!", "You entered invalid credentials!")
+
+        if event == sg.WIN_CLOSED:
+            break
+        if event == "No Account?":
+            openSignupScreen()
+
+    window.close()
+
+state_names = [state.name for state in us.states.STATES_AND_TERRITORIES]
+
+def openSignupScreen(self):
+
+    layout = [
+        [sg.Text("Create a new account.")],
+        [sg.Text('Username', size=(15, 1)), sg.InputText('', key='Username')],
+        [sg.Text('Password', size=(15, 1)), sg.InputText('', key='Password', password_char='*')],
+        [sg.Text('Confirm password', size=(15, 1)), sg.InputText('', key='PasswordConf', password_char='*')],
+        [sg.Text('Firstname', size=(15, 1)), sg.InputText('', key='Firstname')],
+        [sg.Text('Lastname', size=(15, 1)), sg.InputText('', key='Lastname')],
+        [sg.Text('E-mail address', size=(15, 1)), sg.InputText('', key='Email')],
+        [sg.Button("OK")],
+    ]
+    # margins=(500, 500)
+    signupWindow = sg.Window(title="KOA Create Account", layout=layout, web_multiple_instance=True, )
+
+    print('Username: ' + getCurrentUser())
+    while True:
+        event, values = signupWindow.read()
+        # End program if user closes window or
+        # presses the OK button
+
+        if event == "OK":
+            userDict = {"Username": values["Username"],
+                        "Password": get_hashed_password(values["Password"].encode('utf-8')),
+                        "Firstname": values["Firstname"],
+                        "Lastname": values["Lastname"],
+                        "E-mail address": values["Email"]}
+            db.ManagementUsers.insert_one(userDict)
+
+            break
+        if event == sg.WIN_CLOSED:
+            break
+
+# Opens the main dashboard that the user first sees after login, presenting to them a menu of options.
+def openWelcomeScreen(self, stations):
+    print("-openWelcomeScreen-")
+    items = ["Add Station", "Modify Station", "Remove Station"]
+
+    username = (getCurrentUser())
+
+    layout = [
+        [sg.Text("Welcome to the Management Dashboard, " + username.capitalize() + '.')],
+        [sg.Text("Select Weather Station:")],
+        [sg.Listbox(values=stations, select_mode='SINGLE', key='stationsBox', size=(30, 6),
+                    tooltip='Select a weather station to modify.')],
+        [sg.Text("Select a menu option:")],
+        #    [sg.Radio('Add Station', "RADIO1", default=False, key="-ADD-")],
+        #    [sg.Radio('Modify Station', "RADIO1", default=False, key="-MODIFY-")],
+        [sg.InputCombo(items, size=(20, 1), key="stationAction_combobox")],
+        [sg.Button("OK")],
+    ]
+    # margins=(500, 500)
+    ws= (sg.Window(title="KOA Management Console", layout=layout))
+    ws.FindElement('stationAction_combobox').Update('')
+
+    print('Username: ' + getCurrentUser())
+    while True:
+        print("Listening...")
+        event, values = ws.read()
+        if values["stationAction_combobox"]:
+
+            if values["stationAction_combobox"] == "Add Station":
+                openAddStation()
+            elif values["stationAction_combobox"] == "Modify Station":
+                print("Weather Station selected: ", values['stationsBox'])
+                openModifyStation(values['stationsBox'][0])
+
+
+
+def openAddStation(self):
+    print("-openAddStation-")
+    layout = [
+        [sg.Text("Enter weather station info to add it to the database.")],
+        [sg.Text('Station Name', size=(15, 1)), sg.InputText('', key='Station Name')],
+        [sg.Text('Station Street', size=(15, 1)), sg.InputText('', key='Station Street')],
+        [sg.Text('Station Municipality', size=(15, 1)), sg.InputText('', key='Station Municipality')],
+        [sg.Text('Station State', size=(15, 1)),
+         sg.Combo(state_names, default_value='Utah', key='Station State', readonly=True)],
+        [sg.Text('Station Zip Code', size=(15, 1)), sg.InputText('', key='Station Zip Code')],
+        [sg.Button("OK")],
+        [sg.Button("Cancel")],
+
+    ]
+    # window = sg.Window(title="KOA Management Console Login", layout=layout2, margins=(500, 500)).read()
+    window = sg.Window(title="KOA Management Console Add Station", layout=layout)
+
+    while True:
+        event, values = window.read()
+        # End program if user closes window or
+        # presses the OK button
+        if event == "OK":
+            weatherDict = {"name": values["Station Name"], "street": values["Station Street"],
+                           "municipality": values["Station "
+                                                  "Municipality"],
+                           "state": values["Station State"],
+                           "zip code": values["Station Zip Code"]}
+            clientAppMain.KOADB.WeatherStations.insert_one(weatherDict)
+
+            break
+        if event == "Cancel":
+            openWelcomeScreen(getSensors())
+    print("-Opening Welcome Screen-")
+    openWelcomeScreen(getSensors())
+
+def openModifyStation(self, stationName):
+    print("-openModifyStation-")
+    print("Station being modified: ", stationName)
+
+    station = clientAppMain.KOADB.WeatherStations.find_one({'name': stationName})
+    print("Found document in DB: ", station)
+    print("Full Document: ", list(station))
+
+    mongo_id = getDocumentID("WeatherStations", "name", stationName)
+    print("With Object ID: ", mongo_id)
+
+    layout = [
+        [sg.Text("Modify weather station information.")],
+        [sg.Text('Station Name', size=(15, 1)),
+         sg.InputText(clientAppMain.KOADB.WeatherStations.find_one({"name": stationName})["name"],
+                      key='Station Name')],
+        [sg.Text('Station Street', size=(15, 1)),
+         sg.InputText(clientAppMain.KOADB.WeatherStations.find_one({"name": stationName})["street"],
+                      key='Station Street')],
+        [sg.Text('Station Municipality', size=(15, 1)),
+         sg.InputText(clientAppMain.KOADB.WeatherStations.find_one({"name": stationName})["municipality"],
+                      key='Station Municipality')],
+        [sg.Text('Station State', size=(15, 1)),
+         sg.Combo(state_names,
+                  default_value=clientAppMain.KOADB.WeatherStations.find_one({"name": stationName})["state"],
+                  key='Station State', readonly=True)],
+        [sg.Text('Station Zip Code', size=(15, 1)),
+         sg.InputText(clientAppMain.KOADB.WeatherStations.find_one({"name": stationName})["zip code"],
+                      key='Station Zip Code')],
+        [sg.Button("OK")],
+        [sg.Button("Cancel")],
+
+    ]
+
+    # window = sg.Window(title="KOA Management Console Login", layout=layout2, margins=(500, 500)).read()
+    window = sg.Window(title="KOA Management Console Add Station", layout=layout)
+
+    while True:
+        event, values = window.read()
+        # End program if user closes window or
+        # presses the OK button
+        if event == "OK":
+            if values["Station Name"] == '':
+                values["Station Name"] = clientAppMain.KOADB.WeatherStations.find_one({"name": stationName})[
+                    "name"]
+            if values["Station Street"] == '':
+                values["Station Street"] = clientAppMain.KOADB.WeatherStations.find_one({"name": stationName})[
+                    "street"]
+            if values["Station Municipality"] == '':
+                values["Station Municipality"] = \
+                    clientAppMain.KOADB.WeatherStations.find_one({"name": stationName})["municipality"]
+            if values["Station Zip Code"] == '':
+                values["Station Zip Code"] = \
+                    clientAppMain.KOADB.WeatherStations.find_one({"name": stationName})["zip code"]
+
+            weatherDict = {"name": values["Station Name"], "street": values["Station Street"],
+                           "municipality": values["Station "
+                                                  "Municipality"],
+                           "state": values["Station State"],
+                           "zip code": values["Station Zip Code"]}
+            print("Station Updated:", weatherDict)
+            clientAppMain.KOADB.WeatherStations.update_one({'_id': mongo_id}, {"$set": weatherDict},
+                                                                upsert=False)
+
+            break
+        if event == "Cancel" or event == sg.WIN_CLOSED:
+            openWelcomeScreen(getSensors())
+            break
+
+    openWelcomeScreen(getSensors())
+
+# Returns all the weather stations.
+def getSensors(self):
+    print("-getSensors-")
+    sensors = []
+    for x in clientAppMain.KOADB.WeatherStations.find({}, {"_id": 0, "name": 1}):
+        sensors.append(x["name"])
+    return sensors
+
+# Returns the current registered user utilizing the console.
+def getCurrentUser(self):
+    print("-getCurrentUser-")
+    return _userName
+
+# Salt hashes a plaint text password (str) using bcrypt's hashpw method.
+# Returns a Python "bytes" object.
+def get_hashed_password(self, plain_text_password):
+    # Hash a password for the first time
+    #   (Using bcrypt, the salt is saved into the hash itself)
+    return bcrypt.hashpw(plain_text_password, bcrypt.gensalt())
+
+# Validates a salt hashed password with a plaintext string.
+# Returns a boolean.
+def check_password(self, plain_text_password, hashed_password):
+    # Check hashed password. Using bcrypt, the salt is saved into the hash itself
+    return bcrypt.checkpw(plain_text_password, hashed_password)
+
+# Verifies a plaintext password with a salt hashed password (PyMongo cursor).
+# Returns a boolean.
+def check_password_mongoDB(self, entry, userEquate):
+    print("-check_password_mongoDB-")
+    try:
+
+        if userEquate != [""]:
+
+            userEquateListStr = []
+            records = dict((record['Password'], record) for record in userEquate)
+
+            print("Records:", records)
+
+            for i in records:
+                userEquateListStr.append(i)
+                print("Value in list: ", userEquateListStr)
+            print("Checking password...")
+            print("userEquateListStr:", userEquateListStr)
+            PWs = ('{} {}'.format(userEquateListStr, ''))
+
+            PWs = repr(PWs)[4:-1]
+            PWs = PWs[:-3]
+            print("PW: ", PWs, " Entry: ", entry.encode('utf-8'))
+            verifyPW = check_password(entry.encode('utf-8'), PWs.encode('utf-8'))
+            return verifyPW
+        else:
             return False
+    except Exception as e:
+        print("Exception caught when trying to verify credentials with MongoDB.")
+        print("Exception message:", e)
+        return False
 
-    # Finds the document id within a collection in the MongoDB client "db".
-    def getDocumentID(self, collectionName, fieldName, fieldEntry):
-        collection = self.clientAppMain.KOADB[collectionName]
-        cursor = collection.find_one({fieldName: fieldEntry})
-        return cursor["_id"]
+# Finds the document id within a collection in the MongoDB client "db".
+def getDocumentID(self, collectionName, fieldName, fieldEntry):
+    collection = clientAppMain.KOADB[collectionName]
+    cursor = collection.find_one({fieldName: fieldEntry})
+    return cursor["_id"]
 
-    def retrieveMongoDocument(self, collectionName, searchFieldName, searchFieldValue):
+def retrieveMongoDocument(self, collectionName, searchFieldName, searchFieldValue):
 
-        print("Searching for", searchFieldName, "with a value of", searchFieldValue, "in collection",
-              collectionName + ".")
-        cursor = [i for i in self.clientAppMain.KOADB[collectionName].find({searchFieldName: (searchFieldValue)})]
-        return cursor
+    print("Searching for", searchFieldName, "with a value of", searchFieldValue, "in collection",
+          collectionName + ".")
+    cursor = [i for i in clientAppMain.KOADB[collectionName].find({searchFieldName: (searchFieldValue)})]
+    return cursor
 
-    def on_window_close(self):
-        print("User has disconnected.")
-        self._stop_update_flag = True
-        try:
-            for ws in self.websockets:
-                ws.close()
-        except Exception as e:
-            print("No sockets to close.")
+def on_window_close(self):
+    print("User has disconnected.")
+    _stop_update_flag = True
+    try:
+        for ws in websockets:
+            ws.close()
+    except Exception as e:
+        print("No sockets to close.")
+
+def onload(self, emitter):
+    """ WebPage Event that occurs on webpage loaded """
+    super(appWindowMain, self).onload(emitter)
+    # the page reloaded, the timeout timer gets canceled
+    if not (timer_timeout == None):
+        timer_timeout.cancel()
+        timer_timeout = None
 
 
 # Source: https://gist.github.com/rogerallen/1583593
@@ -559,4 +615,9 @@ us_state_to_abbrev = {
     "U.S. Virgin Islands": "VI",
 }
 if __name__ == "__main__":
-    parseConfiguration("False")
+
+    print("Thread created.")
+    thread = Thread(target=startMongoNoCheck)
+    print("Running Flask")
+    run()
+    thread.start()
