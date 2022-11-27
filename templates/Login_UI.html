@@ -1,0 +1,53 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Login</title>
+    <style type="text/css">
+        .LoginTitle {
+            font-family: Cambria, Hoefler Text, Liberation Serif, Times, Times New Roman, serif;
+        }
+
+        .EnterCredentialsLabel {
+            font-family: Cambria, Hoefler Text, Liberation Serif, Times, Times New Roman, serif;
+        }
+
+        .usernameLabel {
+            font-family: Cambria, Hoefler Text, Liberation Serif, Times, Times New Roman, serif;
+        }
+
+        .passwordLabel {
+            font-family: Cambria, Hoefler Text, Liberation Serif, Times, Times New Roman, serif;
+        }
+
+        .noAccountLabel {
+            font-family: Cambria, Hoefler Text, Liberation Serif, Times, Times New Roman, serif;
+        }
+    </style>
+</head>
+
+<body>
+<header class="LoginTitle">
+    <h1>
+        <center>
+            <p><img src="../static/KOAWeather.gif" width="500" height="500" alt=""/></p>
+            <p>KOA Management Console Login</p>
+        </center>
+    </h1>
+</header>
+<center>
+    <section>
+        <p class="EnterCredentialsLabel">Enter your credentials to continue.</p></section>
+    <form action="/login/" method="POST">
+        <input name="username" placeholder="username">
+        <input type="password" name="password" placeholder="password">
+        <input type="submit" value="Login">
+    </form>
+    <section><span class="noAccountLabel">No Account?</span>&nbsp;</section>
+    <form action="/register/" method="GET"><p><input type="submit" name="register" id="register" value="Register"></p>
+    </form>
+</center>
+<br>
+</body>
+
+</html>
