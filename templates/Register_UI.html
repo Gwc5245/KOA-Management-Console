@@ -1,0 +1,76 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>KOA - Register for an Account</title>
+    <style type="text/css">
+        .LoginTitle {
+            font-family: Cambria, Hoefler Text, Liberation Serif, Times, Times New Roman, serif;
+        }
+
+        .EnterCredentialsLabel {
+            font-family: Cambria, Hoefler Text, Liberation Serif, Times, Times New Roman, serif;
+        }
+
+        .usernameLabel {
+            font-family: Cambria, Hoefler Text, Liberation Serif, Times, Times New Roman, serif;
+        }
+
+        .passwordLabel {
+            font-family: Cambria, Hoefler Text, Liberation Serif, Times, Times New Roman, serif;
+        }
+
+        .noAccountLabel {
+            font-family: Cambria, Hoefler Text, Liberation Serif, Times, Times New Roman, serif;
+        }
+
+        .e-mail {
+            font-family: Cambria, Hoefler Text, Liberation Serif, Times, Times New Roman, serif;
+        }
+
+        .passwordConfirmation {
+            font-family: Cambria, Hoefler Text, Liberation Serif, Times, Times New Roman, serif;
+        }
+    </style>
+</head>
+
+<body>
+<header class="LoginTitle">
+    <h1>
+        <center>
+            <p><img src="../static/KOAWeather.gif" width="500" height="500" alt=""/></p>
+            <p>KOA Management Console Login</p>
+        </center>
+    </h1>
+</header>
+<center>
+    <section>
+        <p class="EnterCredentialsLabel">Please register for an account in order to use the Management Console.</p>
+    </section>
+    <p>
+        <label for="username"><span class="usernameLabel">Username</span>:</label>
+        <input type="text" name="username" id="username">
+        <label for="password"><span class="passwordLabel">Password</span>:</label>
+        <input type="password" name="password" id="password"> &nbsp;</p>
+
+    <label for="email" class="e-mail">E-mail:</label>
+    <input type="text" name="email" id="email">
+    <label for="password2" class="passwordConfirmation">Confirm password:</label>
+    <input type="password" name="password2" id="password2">
+    <p>
+        <label for="firstname" class="firstnameLabel">First Name:</label>
+        <input type="text" name="firstname" id="firstname">
+        <label for="lastname" class="lastnameLabel">Last Name:</label>
+        <input type="text" name="lastname" id="lastname"></p>
+    <form action="/register/" method="Post"><p><input type="submit" name="register" id="register" value="Register"></p>
+    </form>
+</center>
+</a>
+</form>
+<section></section>
+<div></div>
+</center>
+<br>
+</body>
+
+</html>
