@@ -40,21 +40,36 @@
     <h1>
         <center>
             <p><img src="../static/KOAWeather.gif" width="500" height="500" alt=""/></p>
-            <p>KOA Management Console Login</p>
+            <p>KOA Management Console</p>
         </center>
     </h1>
 </header>
 <center>
     <section>
-        <p class="EnterCredentialsLabel">Enter your credentials to continue.</p></section>
-    <form action="/login/" method="POST">
-        <input name="username" placeholder="username">
-        <input type="password" name="password" placeholder="password">
-        <input type="submit" value="Login">
+        <p class="EnterCredentialsLabel">Please select a menu option and station to continue.</p></section>
+    <form action="/consoleAction/" method="POST">
+        <select id="stationlist" name="stationlist">
+            {% for each in dropdown_list %}
+            <option value="{{each}}">{{each}}</option>
+            {% endfor %}
+        </select>
+        <p>
+            <label>
+                <input type="radio" name="actionSelection" value="modify" id="modify">
+                Modify Weather Station</label>
+            <br>
+            <label>
+                <input type="radio" name="actionSelection" value="add" id="add">
+                Add Weather Station</label>
+            <br>
+            <label>
+                <input type="radio" name="actionSelection" value="remove" id="remove">
+                Remove Weather Station</label>
+            <br>
+        </p>
+        <input type="submit" value="Submit">
     </form>
-    <section><span class="noAccountLabel">No Account?</span>&nbsp;</section>
-    <form action="/register/" method="GET"><p><input type="submit" name="register" id="register" value="Register"></p>
-    </form>
+
 </center>
 <br>
 </body>
