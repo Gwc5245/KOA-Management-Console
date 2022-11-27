@@ -1,5 +1,14 @@
 <!doctype html>
 <html>
+	        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for msgs in messages %}
+                    <div class="alert alert-info" role="alert">
+                        {{msgs}}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
 <head>
     <meta charset="utf-8">
     <title>KOA - Register for an Account</title>
@@ -47,6 +56,7 @@
     <section>
         <p class="EnterCredentialsLabel">Please register for an account in order to use the Management Console.</p>
     </section>
+	<form action="/register/" method="Post">
     <p>
         <label for="username"><span class="usernameLabel">Username</span>:</label>
         <input type="text" name="username" id="username">
@@ -62,7 +72,7 @@
         <input type="text" name="firstname" id="firstname">
         <label for="lastname" class="lastnameLabel">Last Name:</label>
         <input type="text" name="lastname" id="lastname"></p>
-    <form action="/register/" method="Post"><p><input type="submit" name="register" id="register" value="Register"></p>
+    <p><input type="submit" name="register" id="register" value="Register"></p>
     </form>
 </center>
 </a>
