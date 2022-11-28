@@ -286,7 +286,7 @@ def proccessWelcomeAction():
     print("Station selected:", stationSelected, "Action selected:", actionSelected)
     if actionSelected == "add":
         print("-Add Station-")
-        return render_template('addStation_UI.html', stationStateList = us_state_to_abbrev)
+        return render_template('addStation_UI.html', stationStateList=us_state_to_abbrev)
     elif actionSelected == "modify":
         print("-Modify Station-")
         return render_template('modify_UI.html', stationSelected=stationSelected, stationStateList=us_state_to_abbrev,
@@ -312,10 +312,11 @@ def processModifyAction():
                    "zip code": stationZip}
     print("Mongo Object ID:", mongo_id, "Station Updated:", weatherDict)
     startMongoNoCheck().KOADB.WeatherStations.update_one({'_id': mongo_id}, {"$set": weatherDict},
-                                                        upsert=False)
+                                                         upsert=False)
     return render_template('welcome_UI.html', dropdown_list=getSensors())
 
-@app.route("/addAction/", methods = ['POST'])
+
+@app.route("/addAction/", methods=['POST'])
 def processAddAction():
     stationName = request.form['name']
     stationStreet = request.form['street']
@@ -329,6 +330,7 @@ def processAddAction():
     print("Station Added:", weatherDict)
     startMongoNoCheck().KOADB.WeatherStations.insert_one(weatherDict)
     return render_template('welcome_UI.html', dropdown_list=getSensors())
+
 
 @app.route("/register/", methods=['POST', 'GET'])
 def registerUser():
