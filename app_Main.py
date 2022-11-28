@@ -286,6 +286,7 @@ def proccessWelcomeAction():
     print("Station selected:", stationSelected, "Action selected:", actionSelected)
     if actionSelected == "add":
         print("-Add Station-")
+        return render_template('addStation_UI.html', stationStateList = us_state_to_abbrev)
     elif actionSelected == "modify":
         print("-Modify Station-")
         return render_template('modify_UI.html', stationSelected=stationSelected, stationStateList=us_state_to_abbrev,
