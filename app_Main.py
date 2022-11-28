@@ -247,6 +247,7 @@ state_names = [state.name for state in us.states.STATES_AND_TERRITORIES]
 
 @app.route('/login/', methods=['GET', 'POST'])
 def verifyCredentials():
+    print("-verifyCredentials-")
     if request.method == "POST":
         print(request.form['username'])
 
@@ -276,6 +277,7 @@ def verifyCredentials():
 
 @app.route("/consoleAction/", methods=['POST'])
 def proccessWelcomeAction():
+    print("-proccessWelcomeAction-")
     # stationSelected = request.form[""]
 
     stationSelected = request.form['stationlist']
@@ -294,8 +296,28 @@ def proccessWelcomeAction():
     return render_template('welcome_UI.html', dropdown_list=getSensors())
 
 
+@app.route("/modifyAction/", methods=['POST'])
+def processModifyAction():
+    print("-processModifyAction-")
+    stationName = request.form['name']
+    stationStreet = request.form['street']
+    stationMunicipality = request.form['municipality']
+    stationState = request.form['stationstate']
+    stationZip = request.form['zipcode']
+    mongo_id = getDocumentID("WeatherStations", "name", stationName)
+    weatherDict = {"name": stationName, "street": stationStreet,
+                   "municipality": stationMunicipality,
+                   "state": stationState,
+                   "zip code": stationZip}
+    print("Mongo Object ID:", mongo_id, "Station Updated:", weatherDict)
+    startMongoNoCheck().KOADB.WeatherStations.update_one({'_id': mongo_id}, {"$set": weatherDict},
+                                                        upsert=False)
+    return render_template('welcome_UI.html', dropdown_list=getSensors())
+
+
 @app.route("/register/", methods=['POST', 'GET'])
 def registerUser():
+    print("-registerUser-")
     regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
     if request.method == "GET":
         return render_template('Register_UI.html')
