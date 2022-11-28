@@ -262,7 +262,8 @@ def verifyCredentials():
         print("Verified? ", userAuthenticate)
         if userAuthenticate:
             print("Authentication Successful.")
-            return render_template('welcome_UI.html', dropdown_list=getSensors())
+            return render_template('welcome_UI.html', dropdown_list=getSensors(),
+                                   stationReadings=getAllSensorReadings())
         # thread = Thread(target=openWelcomeScreen(getSensors()))
         # thread.start()
 
@@ -295,7 +296,7 @@ def proccessWelcomeAction():
     elif actionSelected == "remove":
         mongo_id = getDocumentID("WeatherStations", "name", stationSelected)
         print("-Remove Station-")
-        startMongoNoCheck().KOADB.WeatherStations.delete_one({"_id" : mongo_id})
+        startMongoNoCheck().KOADB.WeatherStations.delete_one({"_id": mongo_id})
         return render_template('welcome_UI.html', dropdown_list=getSensors())
     return render_template('welcome_UI.html', dropdown_list=getSensors())
 
@@ -389,6 +390,21 @@ def getSensors():
     for x in startMongoNoCheck().KOADB.WeatherStations.find({}, {"_id": 0, "name": 1}):
         sensors.append(x["name"])
     return sensors
+
+
+def getAllSensorReadings():
+    print("-getAllSensorReadings-")
+    sensors = []
+    sensors2 = []
+    for x in startMongoNoCheck().KOADB.WeatherStationData.find({}, {"_id": 0, "station": 1, "tempF": 1, "tempC": 1,
+                                                                    "humidity": 1, "pressure": 1, "time": 1}):
+        sensors.append((x["station"], "Temperature:", str(x["tempF"]), "℉", str(x["tempC"]) , "℃", "Humidity:",
+                        str(x["humidity"]) + "%", "Pressure:", str(x["pressure"]) + "in", "Time:", str(x["time"]) + ""))
+    for s in sensors:
+        s = str(s).replace(',', '')
+        s = s.replace("'", "")
+        sensors2.append(s)
+    return sensors2
 
 
 # Returns the current registered user utilizing the console.
@@ -548,6 +564,9 @@ def create_app():
 
 
 if __name__ == "__main__":
+    test = getAllSensorReadings()
+    for x in test:
+        print(x)
     parseConfiguration()
     app1 = create_app()
     Thread = Thread(target=app.run(port=port))

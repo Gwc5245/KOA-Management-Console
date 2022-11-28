@@ -46,7 +46,7 @@
 </header>
 <center>
     <section>
-        <p class="EnterCredentialsLabel">Please select a menu option and station to continue.</p></section>
+        <p class="consoleActionSelection">Please select a menu option and station to continue.</p></section>
     <form action="/consoleAction/" method="POST">
         <select id="stationlist" name="stationlist">
             {% for each in dropdown_list %}
@@ -67,10 +67,28 @@
                 Remove Weather Station</label>
             <br>
         </p>
-        <input type="submit" value="Submit">
+        <input type="submit" value="Take Action">
     </form>
 
 </center>
+	<br>
+	<center>
+<section class="sensorReadingsSection" id="sensorReadingsSection"><table width="200" border="1">
+
+	<table>
+ <tr>
+  <th> Station Readings </th>
+ 
+ </tr>
+    {%for readings in stationReadings%}
+    
+  <tr>
+    <td> {{readings}} </td>
+    
+  </tr>
+  {%endfor%}
+
+</section></center>
 <br>
 </body>
 
