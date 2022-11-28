@@ -315,6 +315,20 @@ def processModifyAction():
                                                         upsert=False)
     return render_template('welcome_UI.html', dropdown_list=getSensors())
 
+@app.route("/addAction/", methods = ['POST'])
+def processAddAction():
+    stationName = request.form['name']
+    stationStreet = request.form['street']
+    stationMunicipality = request.form['municipality']
+    stationState = request.form['stationstate']
+    stationZip = request.form['zipcode']
+    weatherDict = {"name": stationName, "street": stationStreet,
+                   "municipality": stationMunicipality,
+                   "state": stationState,
+                   "zip code": stationZip}
+    print("Station Added:", weatherDict)
+    startMongoNoCheck().KOADB.WeatherStations.insert_one(weatherDict)
+    return render_template('welcome_UI.html', dropdown_list=getSensors())
 
 @app.route("/register/", methods=['POST', 'GET'])
 def registerUser():
