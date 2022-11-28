@@ -1,0 +1,83 @@
+<!doctype html>
+<html>
+{% with messages = get_flashed_messages() %}
+{% if messages %}
+{% for msgs in messages %}
+<div class="alert alert-info" role="alert">
+    {{msgs}}
+</div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+<head>
+    <meta charset="utf-8">
+    <title>Login</title>
+    <style type="text/css">
+        .LoginTitle {
+            font-family: Cambria, Hoefler Text, Liberation Serif, Times, Times New Roman, serif;
+        }
+
+        .EnterCredentialsLabel {
+            font-family: Cambria, Hoefler Text, Liberation Serif, Times, Times New Roman, serif;
+        }
+
+        .usernameLabel {
+            font-family: Cambria, Hoefler Text, Liberation Serif, Times, Times New Roman, serif;
+        }
+
+        .passwordLabel {
+            font-family: Cambria, Hoefler Text, Liberation Serif, Times, Times New Roman, serif;
+        }
+
+        .noAccountLabel {
+            font-family: Cambria, Hoefler Text, Liberation Serif, Times, Times New Roman, serif;
+        }
+    </style>
+</head>
+
+<body>
+<header class="LoginTitle">
+    <h1>
+        <center>
+            <p><img src="../static/KOAWeather.gif" width="500" height="500" alt=""/></p>
+            <p>KOA Management Console</p>
+        </center>
+    </h1>
+</header>
+<center>
+    <section>
+        <p class="EnterCredentialsLabel">To modify a station, enter your modified value in the field that you want to
+            change.</p></section>
+    <form action="/consoleAction/" method="POST">
+        <p>
+            <label for="name">Station Name:</label>
+            <input type="text" name="name" id="name" value="{{ stationSelected }}">
+            <br>
+            <label for="street">Station Street:</label>
+            <input type="text" name="street" id="street" value="{{ stationStreet }}">
+            <br>
+            <label for="municipality">Station Municipality:</label>
+            <input type="text" name="municipality" id="municipality" value="{{ stationMunicipality }}">
+            <br>
+            <label for="stationstate">Station State:</label>
+            <select id="stationstate" name="stationstate" value="{{ stationState }}">
+                {% for each in stationStateList %}
+                <option value="{{value}}" {% if value== stationState %} selected {% endif %}>{{each}}</option>
+                {% endfor %}
+                <option selected="selected">
+                    {{ stationState }}
+                </option>
+            </select>
+            <br>
+            <label for="zipcode">Station Zipcode:</label>
+            <input type="text" name="zipcode" id="zipcode" value="{{ stationZipcode }}">
+            <br>
+        </p>
+        <input type="submit" value="Submit">
+    </form>
+
+</center>
+<br>
+</body>
+
+</html>

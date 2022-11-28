@@ -23,6 +23,7 @@ from wtforms import form
 app = Flask(__name__)
 app.secret_key = "super secret key"
 configFile = ()
+
 cfg = configparser.ConfigParser()
 path = os.path.abspath(__file__)
 sg.theme("reddit")
@@ -74,11 +75,12 @@ def openConfigurationFileSelection():
         [sgd.Text("Configuration File"),
          sgd.In(size=(25, 1), enable_events=True, key="-FOLDER-"),
          sgd.FileBrowse(), ],
-        [sgd.Listbox(values=[], enable_events=True, size=(40, 20), key="-FILE LIST-")],
+
     ]
 
     layout = [
-        [sgd.Text("Please select a configuration file.", key='validation')],
+        [sgd.Text("A valid configuration file was not detected. Please select a configuration file.",
+                  key='validation')],
         [sgd.Column(file_list_column)],
         # [sgd.Text('Username', size=(15, 1)), sgd.InputText('', key='Username')],
         [sgd.Button("Save", key='SaveButton')],
@@ -106,11 +108,11 @@ def openConfigurationFileSelection():
                 print(e)
 
         if event == "SaveButton":
-
+            cfg.read('KOAConsole.ini')
             configCheck = checkConfig()
 
             if configCheck:
-                config = parseConfiguration(True)
+                config = parseConfiguration()
                 window.close()
             elif not configCheck:
                 window['validation'].update(
@@ -150,17 +152,12 @@ def startMongo(client_connection):
     clientAppMain = pymongo.MongoClient(
         client_connection,
         server_api=ServerApi('1'))
-
-    print("Databases:", clientAppMain.list_databases())
-
-    # threadLogin()
     return clientAppMain
-    print("\n!!!!!!!!! Thread started.")
 
 
 def configurator(fileLocated):
     print("-configurator-")
-    cfg.read('KOAConsole.ini')
+
     if not fileLocated:
         print("Opening configuration file selection.")
         openConfigurationFileSelection()
@@ -208,7 +205,7 @@ def parseConfiguration():
 
         if not config:
             print("1")
-        #  configurator(False)
+            configurator(False)
         elif config and checkConfig():
             print("2")
         #  configurator(True)
@@ -217,6 +214,7 @@ def parseConfiguration():
             cfg.get("client_connection", "port")
 
     except Exception as e:
+        configurator(False)
         print("There was an issue reading the configuration file. Error message:")
         print(e)
         # configurator(False)
@@ -281,7 +279,18 @@ def proccessWelcomeAction():
     # stationSelected = request.form[""]
 
     stationSelected = request.form['stationlist']
-    print(stationSelected)
+    actionSelected = request.form['actionSelection']
+    station = startMongoNoCheck().KOADB.WeatherStations.find_one({'name': stationSelected})
+    print("Station selected:", stationSelected, "Action selected:", actionSelected)
+    if actionSelected == "add":
+        print("-Add Station-")
+    elif actionSelected == "modify":
+        print("-Modify Station-")
+        return render_template('modify_UI.html', stationSelected=stationSelected, stationStateList=us_state_to_abbrev,
+                               stationStreet=station['street'], stationMunicipality=station['municipality'],
+                               stationState=station['state'], stationZipcode=station['zip code'])
+    elif actionSelected == "remove":
+        print("-Remove Station-")
     return render_template('welcome_UI.html', dropdown_list=getSensors())
 
 
