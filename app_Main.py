@@ -293,7 +293,10 @@ def proccessWelcomeAction():
                                stationStreet=station['street'], stationMunicipality=station['municipality'],
                                stationState=station['state'], stationZipcode=station['zip code'])
     elif actionSelected == "remove":
+        mongo_id = getDocumentID("WeatherStations", "name", stationSelected)
         print("-Remove Station-")
+        startMongoNoCheck().KOADB.WeatherStations.delete_one({"_id" : mongo_id})
+        return render_template('welcome_UI.html', dropdown_list=getSensors())
     return render_template('welcome_UI.html', dropdown_list=getSensors())
 
 
