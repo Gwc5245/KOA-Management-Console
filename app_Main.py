@@ -13,12 +13,11 @@ import pymongo as pymongo
 import pymongo_auth_aws as g
 import us as us
 import wtforms
+from wtforms import form
 from flask import Flask, render_template, request, flash, url_for, redirect
 from flask_pymongo import PyMongo
 from pymongo.server_api import ServerApi
 from remi.server import StandaloneServer, Server
-
-from wtforms import form
 
 app = Flask(__name__)
 app.secret_key = "super secret key"
@@ -33,7 +32,7 @@ s = g
 appWindowMain = ()
 client = pymongo.MongoClient(
     "mongodb+srv://<AWS access key>:<AWS secret "
-    "key>@cluster0.re3ie7p.mongodb.net/?authSource=%24external&authMechanism=MONGODB-AWS&retryWrites=true&w=majority",
+    "key>@cluster",
     server_api=ServerApi('1'))
 
 db = client.KOADB
