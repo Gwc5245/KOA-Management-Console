@@ -7,18 +7,17 @@ import shutil
 from threading import Thread
 
 import PySimpleGUI as sgd
-import PySimpleGUIWeb as sg
+
 import bcrypt
 import pymongo as pymongo
 import pymongo_auth_aws as g
 import us as us
 import wtforms
+from wtforms import form
 from flask import Flask, render_template, request, flash, url_for, redirect
 from flask_pymongo import PyMongo
 from pymongo.server_api import ServerApi
 from remi.server import StandaloneServer, Server
-
-from wtforms import form
 
 app = Flask(__name__)
 app.secret_key = "super secret key"
@@ -26,7 +25,7 @@ configFile = ()
 
 cfg = configparser.ConfigParser()
 path = os.path.abspath(__file__)
-sg.theme("reddit")
+sgd.theme("reddit")
 port = 25566
 # MongoDB connection
 s = g
@@ -36,7 +35,7 @@ client = pymongo.MongoClient(
     "key>@cluster0.re3ie7p.mongodb.net/?authSource=%24external&authMechanism=MONGODB-AWS&retryWrites=true&w=majority",
     server_api=ServerApi('1'))
 
-db = client.KOADB
+
 
 
 # print("Collections: ", db.list_collection_names())
@@ -50,7 +49,7 @@ def run():
     app.run(debug=True, port=port, host="0.0.0.0")
 
 
-def genConfigFile(db_url, in_port):
+def genConfigFile(db_url, in_port, m5_aws_access, m5_aws_secret):
     print("-genConfigFile-")
     try:
 
@@ -58,13 +57,16 @@ def genConfigFile(db_url, in_port):
         db_url = db_url.replace('%', '%%')
         cfg.add_section('WebUI Configuration')
         port = (int(in_port))
+        cfg.add_section('M5Stack Configuration')
         # client = pymongo.MongoClient(db_url, server_api=ServerApi('1'))
     except Exception as e:
         print("There was an issue with the url entered for the Mongo Client. Message:")
         print(e)
 
     cfg.set('MongoDB Configuration', 'client_connection', db_url)
-    cfg.set('WebUI Configuration', 'web_ui_port', port)
+    cfg.set('WebUI Configuration', 'web_ui_port', str(port))
+    cfg.set('M5Stack Configuration', 'm5_aws_access', m5_aws_access)
+    cfg.set('M5Stack Configuration', 'm5_aws_secret', m5_aws_secret)
     with open('KOAConsole.ini', 'w') as configfile:
         print(cfg.write(configfile))
 
@@ -91,7 +93,7 @@ def openConfigurationFileSelection():
     window = sgd.Window(title="KOA Management Console Configuration", layout=layout)
     while True:
         event, values = window.read()
-        if event == "Exit" or event == sg.WIN_CLOSED:
+        if event == "Exit" or event == sgd.WIN_CLOSED:
             break
         # Folder name was filled in, make a list of files in the folder
         if event == "-FOLDER-":
@@ -398,8 +400,9 @@ def getAllSensorReadings():
     sensors2 = []
     for x in startMongoNoCheck().KOADB.WeatherStationData.find({}, {"_id": 0, "station": 1, "tempF": 1, "tempC": 1,
                                                                     "humidity": 1, "pressure": 1, "time": 1}):
-        sensors.append((x["station"], "Temperature:", str(x["tempF"]), "℉", str(x["tempC"]) , "℃", "Humidity:",
-                        str(x["humidity"]) + "%", "Pressure:", str(x["pressure"]) + "in", "Time:", str(x["time"]) + ""))
+        sensors.append((x["station"], "Temperature:", str(x["tempF"]), "℉", str(x["tempC"]), "℃", "Humidity:",
+                        str(x["humidity"]) + "%", "Pressure:", str(x["pressure"]) + " in", "Time:",
+                        str(x["time"]) + ""))
     for s in sensors:
         s = str(s).replace(',', '')
         s = s.replace("'", "")
@@ -564,9 +567,9 @@ def create_app():
 
 
 if __name__ == "__main__":
-    test = getAllSensorReadings()
-    for x in test:
-        print(x)
+    #    test = getAllSensorReadings()
+    #   for x in test:
+    #        print(x)
     parseConfiguration()
     app1 = create_app()
     Thread = Thread(target=app.run(port=port))
