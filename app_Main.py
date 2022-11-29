@@ -31,7 +31,7 @@ port = 25566
 s = g
 appWindowMain = ()
 client = pymongo.MongoClient(
-    "mongodb+srv://<AWS access key>:<AWS secret "
+    "mongodb+srv://<AWS access key>:<AWS secret"
     "key>@cluster",
     server_api=ServerApi('1'))
 
