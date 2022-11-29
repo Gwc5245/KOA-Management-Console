@@ -31,11 +31,11 @@ port = 25566
 s = g
 appWindowMain = ()
 client = pymongo.MongoClient(
-    "mongodb+srv://<AWS access key>:<AWS secret"
-    "key>@cluster",
+    "mongodb+srv://<AWS access key>:<AWS secret "
+    "key>@cluster0.re3ie7p.mongodb.net/?authSource=%24external&authMechanism=MONGODB-AWS&retryWrites=true&w=majority",
     server_api=ServerApi('1'))
 
-db = client.KOADB
+
 
 
 # print("Collections: ", db.list_collection_names())
