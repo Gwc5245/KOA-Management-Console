@@ -203,8 +203,13 @@ def autoParse():
 
 
 @app.route('/ConsoleApplication.txt', methods=["GET"])
-def here(address=None):
+def logTXT(address=None):
     return app.send_static_file('ConsoleApplication.txt')
+
+
+@app.route('/static/KOAWeather.gif', methods=["GET"])
+def logoGIF(address=None):
+    return app.send_static_file('KOAWeather.gif')
 
 
 @app.route('/getlogs/', methods=["GET"])
