@@ -14,8 +14,9 @@ import pymongo_auth_aws as g
 import us as us
 import wtforms
 from wtforms import form
-from flask import Flask, render_template, request, flash, url_for, redirect
+from flask import Flask, render_template, request, flash, url_for, redirect, session
 from flask_pymongo import PyMongo
+from flask_session import Session
 from pymongo.server_api import ServerApi
 from remi.server import StandaloneServer, Server
 
@@ -34,8 +35,6 @@ client = pymongo.MongoClient(
     "mongodb+srv://<AWS access key>:<AWS secret "
     "key>@cluster0.re3ie7p.mongodb.net/?authSource=%24external&authMechanism=MONGODB-AWS&retryWrites=true&w=majority",
     server_api=ServerApi('1'))
-
-
 
 
 # print("Collections: ", db.list_collection_names())
@@ -251,36 +250,51 @@ tray = sgd.SystemTray(menu, tooltip=tooltip)
 state_names = [state.name for state in us.states.STATES_AND_TERRITORIES]
 
 
-@app.route('/login/', methods=['GET', 'POST'])
+@app.route('/login/', methods=['POST'])
 def verifyCredentials():
     print("-verifyCredentials-")
-    if request.method == "POST":
-        print(request.form['username'])
+    try:
+        if request.method == "POST":
+            print(request.form['username'])
 
-        _userName = request.form['username']
+            _userName = request.form['username']
 
-        clientAppMain = startMongoNoCheck()
-        print("User I am searching for: ", _userName)
-        print("Users", clientAppMain.KOADB.ManagementUsers.find({}))
-        userEquate = clientAppMain.KOADB.ManagementUsers.find({'Username': _userName})
-        print("User Cursor: ", userEquate)
-        print("Entered pass:", request.form['password'])
-        userAuthenticate = check_password_mongoDB(request.form['password'], userEquate)
-        print("Verified? ", userAuthenticate)
-        if userAuthenticate:
-            print("Authentication Successful.")
-            return render_template('welcome_UI.html', dropdown_list=getSensors(),
-                                   stationReadings=getAllSensorReadings())
-        # thread = Thread(target=openWelcomeScreen(getSensors()))
-        # thread.start()
+            clientAppMain = startMongoNoCheck()
+            print("User I am searching for: ", _userName)
+            print("Users", clientAppMain.KOADB.ManagementUsers.find({}))
+            userEquate = clientAppMain.KOADB.ManagementUsers.find({'Username': _userName})
+            print("User Cursor: ", userEquate)
+            print("Entered pass:", request.form['password'])
+            userAuthenticate = check_password_mongoDB(request.form['password'], userEquate)
+            print("Verified? ", userAuthenticate)
+            if userAuthenticate:
+                print("Authentication Successful.")
+                session["name"] = request.form.get("username")
+                return openWelcomeScreen()
+            # thread = Thread(target=openWelcomeScreen(getSensors()))
+            # thread.start()
 
-        else:
-            print("Invalid credentials entered.")
-            flash("Invalid credentials were entered. Please check your username and password.")
-            return redirect(url_for("index"))
+            else:
+                print("Invalid credentials entered.")
+                flash("Invalid credentials were entered. Please check your username and password.")
+                return redirect(url_for("index"))
+    except Exception as e:
+        print("Error verifying credentials. Error:\n", e)
 
         #     window['title'].update(value='Invalid credentials were entered!', text_color='red')
         #     tray.show_message("Warning!", "You entered invalid credentials!")
+
+
+@app.route("/logout")
+def logout():
+    session["name"] = None
+    return redirect("/")
+
+
+@app.route("/login/", methods=['GET'])
+def openLoginScreen():
+    session["name"] = None
+    return redirect(url_for("index"))
 
 
 @app.route("/consoleAction/", methods=['POST'])
@@ -304,8 +318,9 @@ def proccessWelcomeAction():
         mongo_id = getDocumentID("WeatherStations", "name", stationSelected)
         print("-Remove Station-")
         startMongoNoCheck().KOADB.WeatherStations.delete_one({"_id": mongo_id})
-        return render_template('welcome_UI.html', dropdown_list=getSensors())
-    return render_template('welcome_UI.html', dropdown_list=getSensors())
+        return openWelcomeScreen()
+    elif actionSelected == "allreadings":
+        return openAllSensorsScreen()
 
 
 @app.route("/modifyAction/", methods=['POST'])
@@ -324,7 +339,7 @@ def processModifyAction():
     print("Mongo Object ID:", mongo_id, "Station Updated:", weatherDict)
     startMongoNoCheck().KOADB.WeatherStations.update_one({'_id': mongo_id}, {"$set": weatherDict},
                                                          upsert=False)
-    return render_template('welcome_UI.html', dropdown_list=getSensors())
+    return openWelcomeScreen()
 
 
 @app.route("/addAction/", methods=['POST'])
@@ -340,7 +355,7 @@ def processAddAction():
                    "zip code": stationZip}
     print("Station Added:", weatherDict)
     startMongoNoCheck().KOADB.WeatherStations.insert_one(weatherDict)
-    return render_template('welcome_UI.html', dropdown_list=getSensors())
+    return openWelcomeScreen()
 
 
 @app.route("/register/", methods=['POST', 'GET'])
@@ -384,10 +399,19 @@ def registerUser():
     return "There was an issue with entered credentials."
 
 
-@app.route("/forward/", methods=['POST'])
+@app.route("/forward/", methods=['GET'])
 # Opens the main dashboard that the user first sees after login, presenting to them a menu of options.
-def openWelcomeScreen(self, stations):
+def openWelcomeScreen():
     print("-openWelcomeScreen-")
+    if not session.get("name"):
+        return redirect("/")
+    return render_template('welcome_UI.html', dropdown_list=getSensors())
+
+
+@app.route("/getAllSensorReadings/", methods=['GET'])
+def openAllSensorsScreen():
+    print("-openAllSensorsScreen-")
+    return render_template('allSensorReadings_UI.html', stationReadings=getAllSensorReadings())
 
 
 # Returns all the weather stations.
@@ -404,16 +428,40 @@ def getAllSensorReadings():
     sensors = []
     sensors2 = []
     for x in startMongoNoCheck().KOADB.WeatherStationData.find({}, {"_id": 0, "station": 1, "tempF": 1, "tempC": 1,
-                                                                    "humidity": 1, "pressure": 1, "time": 1, "date":1}):
+                                                                    "humidity": 1, "pressure": 1, "time": 1,
+                                                                    "date": 1}):
         sensors.append((x["station"], "Temperature:", str(x["tempF"]), "℉", str(x["tempC"]), "℃", "Humidity:",
                         str(x["humidity"]) + "%", "Pressure:", str(x["pressure"]) + " in", "Time:",
-                        str(x["time"]),"Date:",
+                        str(x["time"]), "Date:",
                         str(x["date"]) + ""))
     for s in sensors:
         s = str(s).replace(',', '')
         s = s.replace("'", "")
         sensors2.append(s)
     return sensors2
+
+
+def getSensorReading(sensor):
+    print("-getSensorReading-")
+
+    sensorData = []
+    try:
+        for x in startMongoNoCheck().KOADB.WeatherStationData.find(({"station": sensor}),
+                                                                   {"_id": 0, "station": 1, "tempF": 1, "tempC": 1,
+                                                                    "humidity": 1, "pressure": 1, "time": 1,
+                                                                    "date": 1}):
+            sensorData.append({
+                "Temperature℉": str(x["tempF"]),
+                "Temperature℃": str(x["tempC"]),
+                "Humidity": str(x["humidity"]),
+                "Pressure": str(x["pressure"]),
+                "Time": str(x["time"]),
+                "Date": str(x["date"])})
+
+        return sensorData
+    except Exception as e:
+        print("An error occurred while getting a sensor reading for", sensor, " Error:\n", e)
+        return False
 
 
 # Returns the current registered user utilizing the console.
@@ -561,7 +609,7 @@ def get_db():
 def create_app():
     app.config['DEBUG'] = True
     app.config['MONGO_URI'] = cfg.get("MongoDB Configuration", "client_connection")
-
+    app.config["SESSION_PERMANENT"] = False
     # db.init_app(app)
 
     # from yourapplication.views.admin import admin
@@ -576,10 +624,12 @@ if __name__ == "__main__":
     #    test = getAllSensorReadings()
     #   for x in test:
     #        print(x)
+
     parseConfiguration()
     app1 = create_app()
     Thread = Thread(target=app.run(port=port))
     Thread.run()
+
     # clientAppMain = startMongoNoCheck()
     # print("Thread created.")
     # thread = Thread(target=startMongoNoCheck)

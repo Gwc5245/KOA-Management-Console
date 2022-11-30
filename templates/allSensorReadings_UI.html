@@ -43,40 +43,38 @@
             <p>KOA Management Console</p>
         </center>
     </h1>
-	<center><a href="/logout">Logout</a></center>
 </header>
 <center>
     <section>
-        <p class="consoleActionSelection">Please select a menu option and station to continue.</p></section>
-    <form action="/consoleAction/" method="POST">
-        <select id="stationlist" name="stationlist">
-            {% for each in dropdown_list %}
-            <option value="{{each}}">{{each}}</option>
-            {% endfor %}
-        </select>
-        <p>
-            <label>
-                <input type="radio" name="actionSelection" value="modify" id="modify">
-                Modify Weather Station</label>
-            <br>
-            <label>
-                <input type="radio" name="actionSelection" value="add" id="add">
-                Add Weather Station</label>
-            <br>
-            <label>
-                <input type="radio" name="actionSelection" value="remove" id="remove">
-                Remove Weather Station</label>
-            <br>
-                        <label>
-                <input type="radio" name="actionSelection" value="allreadings" id="allreadings">
-                View All Sensor Readings</label>
-            <br>
-        </p>
-        <input type="submit" value="Take Action">
+        <p class="consoleActionSelection">Weather Station Readings - All</p>
+		
+      <a href="/forward">Home</a>
+		
+    </section>
+    <form action="/getAllSensorReadings/" method="GET">
+<center>
+<section class="sensorReadingsSection" id="sensorReadingsSection"><table width="200" border="1">
+
+	<table>
+ <tr>
+  <th> Station Readings </th>
+ 
+ </tr>
+    {%for readings in stationReadings%}
+    
+  <tr>
+    <td> {{readings}} </td>
+    
+  </tr>
+  {%endfor%}
+
+</section></center>
     </form>
 
 </center>
-
+	<br>
+	
+<br>
 </body>
 
 </html>
