@@ -129,7 +129,7 @@ def checkConfig():
         print("-checkConfig-")
         # print("Configuration being checked:", config, type(config))
         print("Sections:", (cfg.sections()))
-        portIn = (cfg.get('WebUI Configuration', "Port"))
+        portIn = (cfg.get('WebUI Configuration', "web_ui_port"))
         client_connection = (cfg.get("MongoDB Configuration", "client_connection"))
         print(client_connection, portIn)
         if not portIn:
@@ -202,7 +202,11 @@ def parseConfiguration():
 
         config = cfg.read('KOAConsole.ini')
 
-        configInput = [cfg.get("MongoDB Configuration", "client_connection"), cfg.get("WebUI Configuration", "Port")]
+        configInput = [cfg.get("MongoDB Configuration", "client_connection"),
+                       cfg.get("WebUI Configuration", "web_ui_port"),
+                       cfg.get("M5Stack Configuration", "m5_aws_access"),
+                       cfg.get("M5Stack Configuration", "m5_aws_secret")
+                       ]
         print("Configuration Read:", configInput)
 
         if not config:
@@ -213,14 +217,14 @@ def parseConfiguration():
         #  configurator(True)
         else:
             config = cfg.read('KOAConsole.ini')
-            cfg.get("client_connection", "port")
+            # cfg.get("client_connection", "web_ui_port")
 
     except Exception as e:
         configurator(False)
         print("There was an issue reading the configuration file. Error message:")
         print(e)
         # configurator(False)
-    return [cfg.get("MongoDB Configuration", "client_connection"), cfg.get("WebUI Configuration", "Port"), ]
+    return configInput
 
 
 # Calculates the hash of the directory the python file is in.
