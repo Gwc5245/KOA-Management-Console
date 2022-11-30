@@ -16,7 +16,6 @@ import wtforms
 from wtforms import form
 from flask import Flask, render_template, request, flash, url_for, redirect, session
 from flask_pymongo import PyMongo
-from flask_session import Session
 from pymongo.server_api import ServerApi
 from remi.server import StandaloneServer, Server
 
@@ -48,6 +47,18 @@ def run():
     app.run(debug=True, port=port, host="0.0.0.0")
 
 
+# Create and configure logger
+logging.basicConfig(filename="static\ConsoleApplication.txt",
+                    format='%(asctime)s %(message)s',
+                    filemode='w')
+
+# Creating an object
+logger = logging.getLogger()
+
+# Setting the threshold of logger to DEBUG
+logger.setLevel(logging.DEBUG)
+
+
 def genConfigFile(db_url, in_port, m5_aws_access, m5_aws_secret):
     print("-genConfigFile-")
     try:
@@ -59,8 +70,9 @@ def genConfigFile(db_url, in_port, m5_aws_access, m5_aws_secret):
         cfg.add_section('M5Stack Configuration')
         # client = pymongo.MongoClient(db_url, server_api=ServerApi('1'))
     except Exception as e:
-        print("There was an issue with the url entered for the Mongo Client. Message:")
+        print("There was an issue generating configuration file. Message:")
         print(e)
+        logger.exception("Configuration file generation error. " + str(e))
 
     cfg.set('MongoDB Configuration', 'client_connection', db_url)
     cfg.set('WebUI Configuration', 'web_ui_port', str(port))
@@ -68,10 +80,12 @@ def genConfigFile(db_url, in_port, m5_aws_access, m5_aws_secret):
     cfg.set('M5Stack Configuration', 'm5_aws_secret', m5_aws_secret)
     with open('KOAConsole.ini', 'w') as configfile:
         print(cfg.write(configfile))
+        logger.info("Wrote configuration to KOAConsole.ini")
 
 
 def openConfigurationFileSelection():
     print("-openConfigurationFileSelection-")
+    logger.info("Opening configuration file selection window.")
     file_list_column = [
         [sgd.Text("Configuration File"),
          sgd.In(size=(25, 1), enable_events=True, key="-FOLDER-"),
@@ -114,10 +128,13 @@ def openConfigurationFileSelection():
 
             if configCheck:
                 config = parseConfiguration()
+                logger.critical("New configuration saved and will be used by the program.")
                 window.close()
             elif not configCheck:
                 window['validation'].update(
                     value='Invalid configuration detected. \nPlease make sure all necessary fields are entered.', )
+                logger.error("Invalid configuration detected. There may be a missing parameter or typo in "
+                             "KOAConsole.ini.")
 
 
 clientPass = ""
@@ -170,29 +187,29 @@ def configurator(fileLocated):
 
 def startMongoNoCheck():
     print("-startMongoNoCheck-")
+    logger.info("-startMongoNoCheck- Contacting MongoDB database.")
     cfg.read('KOAConsole.ini')
-    clientPass = cfg.get("MongoDB Configuration", "client_connection")
+    try:
+        clientPass = cfg.get("MongoDB Configuration", "client_connection")
+    except Exception as e:
+        logger.exception("-startMongoNoCheck- There was an issue connecting to MongoDB. " + str(e))
+        parseConfiguration()
+
     return startMongo(clientPass)
-
-
-def start(main_gui_class, **kwargs):
-    """This method starts the webserver with a specific App subclass."""
-    debug = kwargs.pop('debug', False)
-    standalone = kwargs.pop('standalone', False)
-
-    logging.basicConfig(level=logging.DEBUG if debug else logging.INFO,
-                        format='%(name)-16s %(levelname)-8s %(message)s')
-    logging.getLogger('remi').setLevel(
-        level=logging.DEBUG if debug else logging.INFO)
-
-    if standalone:
-        s = StandaloneServer(main_gui_class, start=True, **kwargs)
-    else:
-        s = Server(main_gui_class, multiple_instance=True, start=True, **kwargs)
 
 
 def autoParse():
     parseConfiguration(False)
+
+
+@app.route('/ConsoleApplication.txt', methods=["GET"])
+def here(address=None):
+    return app.send_static_file('ConsoleApplication.txt')
+
+
+@app.route('/getlogs/', methods=["GET"])
+def openLogScreen():
+    return render_template("consoleLog_UI.html")
 
 
 def parseConfiguration():
@@ -210,18 +227,22 @@ def parseConfiguration():
 
         if not config:
             print("1")
+            logger.error("-parseConfiguration- There is an issue with the configuration file or none is present. "
+                         "Opening configuration prompt.")
             configurator(False)
         elif config and checkConfig():
             print("2")
         #  configurator(True)
         else:
             config = cfg.read('KOAConsole.ini')
+            logger.info("-parseConfiguration- Configuration file read.")
             # cfg.get("client_connection", "web_ui_port")
 
     except Exception as e:
         configurator(False)
         print("There was an issue reading the configuration file. Error message:")
         print(e)
+        logger.exception("-parseConfiguration- + Configuration parsing exception. " + str(e))
         # configurator(False)
     return configInput
 
@@ -269,17 +290,21 @@ def verifyCredentials():
             print("Verified? ", userAuthenticate)
             if userAuthenticate:
                 print("Authentication Successful.")
+                logger.info("-verifyCredentials- User authentication successful. User: " + _userName)
                 session["name"] = request.form.get("username")
                 return openWelcomeScreen()
             # thread = Thread(target=openWelcomeScreen(getSensors()))
             # thread.start()
 
             else:
+                logger.error("-verifyCredentials- Invalid credentials were entered for user " +
+                             request.form['username'])
                 print("Invalid credentials entered.")
                 flash("Invalid credentials were entered. Please check your username and password.")
                 return redirect(url_for("index"))
     except Exception as e:
         print("Error verifying credentials. Error:\n", e)
+        logger.exception("-verifyCredentials- There was an exception while verifying credentials. " + str(e))
 
         #     window['title'].update(value='Invalid credentials were entered!', text_color='red')
         #     tray.show_message("Warning!", "You entered invalid credentials!")
@@ -287,6 +312,7 @@ def verifyCredentials():
 
 @app.route("/logout")
 def logout():
+    logger.info("-logout- User sign-out: " + session["name"])
     session["name"] = None
     return redirect("/")
 
@@ -301,26 +327,42 @@ def openLoginScreen():
 def proccessWelcomeAction():
     print("-proccessWelcomeAction-")
     # stationSelected = request.form[""]
-
-    stationSelected = request.form['stationlist']
-    actionSelected = request.form['actionSelection']
-    station = startMongoNoCheck().KOADB.WeatherStations.find_one({'name': stationSelected})
-    print("Station selected:", stationSelected, "Action selected:", actionSelected)
-    if actionSelected == "add":
-        print("-Add Station-")
-        return render_template('addStation_UI.html', stationStateList=us_state_to_abbrev)
-    elif actionSelected == "modify":
-        print("-Modify Station-")
-        return render_template('modify_UI.html', stationSelected=stationSelected, stationStateList=us_state_to_abbrev,
-                               stationStreet=station['street'], stationMunicipality=station['municipality'],
-                               stationState=station['state'], stationZipcode=station['zip code'])
-    elif actionSelected == "remove":
-        mongo_id = getDocumentID("WeatherStations", "name", stationSelected)
-        print("-Remove Station-")
-        startMongoNoCheck().KOADB.WeatherStations.delete_one({"_id": mongo_id})
-        return openWelcomeScreen()
-    elif actionSelected == "allreadings":
-        return openAllSensorsScreen()
+    try:
+        stationSelected = request.form['stationlist']
+        actionSelected = request.form['actionSelection']
+        station = startMongoNoCheck().KOADB.WeatherStations.find_one({'name': stationSelected})
+        print("Station selected:", stationSelected, "Action selected:", actionSelected)
+        if actionSelected == "add":
+            print("-Add Station-")
+            logger.info("-proccessWelcomeAction- User " + session[
+                "name"] + "is performing the following action: " + actionSelected + " on station " + stationSelected)
+            return render_template('addStation_UI.html', stationStateList=us_state_to_abbrev)
+        elif actionSelected == "modify":
+            print("-Modify Station-")
+            logger.info("-proccessWelcomeAction- User " + session[
+                "name"] + "is performing the following action: " + actionSelected + " on station " + stationSelected)
+            return render_template('modify_UI.html', stationSelected=stationSelected,
+                                   stationStateList=us_state_to_abbrev,
+                                   stationStreet=station['street'], stationMunicipality=station['municipality'],
+                                   stationState=station['state'], stationZipcode=station['zip code'])
+        elif actionSelected == "remove":
+            mongo_id = getDocumentID("WeatherStations", "name", stationSelected)
+            print("-Remove Station-")
+            logger.info("-proccessWelcomeAction- User " + session[
+                "name"] + "is performing the following action: " + actionSelected + " on station " + stationSelected)
+            startMongoNoCheck().KOADB.WeatherStations.delete_one({"_id": mongo_id})
+            return openWelcomeScreen()
+        elif actionSelected == "getlogs":
+            return openLogScreen()
+        elif actionSelected == "allreadings":
+            logger.info("-proccessWelcomeAction- User " + session[
+                "name"] + "is performing the following action: " + actionSelected)
+            return openAllSensorsScreen()
+    except Exception as e:
+        print("Exception occurred performing the requesting action.", str(e))
+        flash("Your requested action could not be performed at this time. Please see logs for details.")
+        logger.exception("-processWelcomeAction- There was an issue processing user " + session[
+            'name'] + "'s requested action. " + str(e))
 
 
 @app.route("/modifyAction/", methods=['POST'])

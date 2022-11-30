@@ -1,0 +1,69 @@
+<!doctype html>
+<html>
+{% with messages = get_flashed_messages() %}
+{% if messages %}
+{% for msgs in messages %}
+<div class="alert alert-info" role="alert">
+    {{msgs}}
+</div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+<head>
+    <meta charset="utf-8">
+    <title>Login</title>
+    <style type="text/css">
+        .LoginTitle {
+            font-family: Cambria, Hoefler Text, Liberation Serif, Times, Times New Roman, serif;
+        }
+
+        .EnterCredentialsLabel {
+            font-family: Cambria, Hoefler Text, Liberation Serif, Times, Times New Roman, serif;
+        }
+
+        .usernameLabel {
+            font-family: Cambria, Hoefler Text, Liberation Serif, Times, Times New Roman, serif;
+        }
+
+        .passwordLabel {
+            font-family: Cambria, Hoefler Text, Liberation Serif, Times, Times New Roman, serif;
+        }
+
+        .noAccountLabel {
+            font-family: Cambria, Hoefler Text, Liberation Serif, Times, Times New Roman, serif;
+        }
+    </style>
+</head>
+
+<body>
+<header class="LoginTitle">
+    <h1>
+        <center>
+            <p><img src="../static/KOAWeather.gif" width="500" height="500" alt=""/></p>
+            <p>KOA Management Console</p>
+        </center>
+    </h1>
+</header>
+<center>
+    <section>
+        <p class="consoleActionSelection">KOA Management Console Log</p>
+		
+      <a href="/forward">Home</a>
+		
+    </section>
+    <form action="/getAllSensorReadings/" method="GET">
+<center>
+
+
+<embed src="/ConsoleApplication.txt" width="1000" type="text/plain"  height="1000">
+</embed>
+</center>
+    </form>
+
+</center>
+	<br>
+	
+<br>
+</body>
+
+</html>
