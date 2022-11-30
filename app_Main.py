@@ -258,6 +258,7 @@ def verifyCredentials():
         print(request.form['username'])
 
         _userName = request.form['username']
+
         clientAppMain = startMongoNoCheck()
         print("User I am searching for: ", _userName)
         print("Users", clientAppMain.KOADB.ManagementUsers.find({}))
@@ -403,10 +404,11 @@ def getAllSensorReadings():
     sensors = []
     sensors2 = []
     for x in startMongoNoCheck().KOADB.WeatherStationData.find({}, {"_id": 0, "station": 1, "tempF": 1, "tempC": 1,
-                                                                    "humidity": 1, "pressure": 1, "time": 1}):
+                                                                    "humidity": 1, "pressure": 1, "time": 1, "date":1}):
         sensors.append((x["station"], "Temperature:", str(x["tempF"]), "℉", str(x["tempC"]), "℃", "Humidity:",
                         str(x["humidity"]) + "%", "Pressure:", str(x["pressure"]) + " in", "Time:",
-                        str(x["time"]) + ""))
+                        str(x["time"]),"Date:",
+                        str(x["date"]) + ""))
     for s in sensors:
         s = str(s).replace(',', '')
         s = s.replace("'", "")
