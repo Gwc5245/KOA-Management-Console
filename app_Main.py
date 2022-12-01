@@ -47,8 +47,11 @@ def run():
     app.run(debug=True, port=port, host="0.0.0.0")
 
 
+from pathlib import Path
+ROOT_DIR = os.path.realpath(os.path.join(os.path.dirname(__file__)))
 # Create and configure logger
-logging.basicConfig(filename="static\ConsoleApplication.txt",
+
+logging.basicConfig(filename= os.path.join(ROOT_DIR, 'static', 'ConsoleApplication.txt'),
                     format='%(asctime)s %(message)s',
                     filemode='w')
 
