@@ -48,10 +48,11 @@ def run():
 
 
 from pathlib import Path
+
 ROOT_DIR = os.path.realpath(os.path.join(os.path.dirname(__file__)))
 # Create and configure logger
 
-logging.basicConfig(filename= os.path.join(ROOT_DIR, 'static', 'ConsoleApplication.txt'),
+logging.basicConfig(filename=os.path.join(ROOT_DIR, 'static', 'ConsoleApplication.txt'),
                     format='%(asctime)s %(message)s',
                     filemode='w')
 
@@ -153,12 +154,17 @@ def checkConfig():
         print(client_connection, portIn)
         if not portIn:
             print("Port connection not found in configuration file.")
+            logger.error("-checkConfig- There was an issue with the configuration file: no port found for web_ui_port.")
             return False
         if not client_connection:
             print("Client connection not found in configuration file.")
+            logger.error(
+                "-checkConfig- There was an issue with the configuration file: Mongo URI for ""client_connection"" not found or is invalid.")
             return False
     except Exception as e:
         print("There is an issue with the configuration file:", e)
+        logger.exception(
+            "-checkConfig- There is a critical issue with the configuration file. Response received: " + str(e))
         sgd.Popup(("There is an issue with the configuration file:\n" + "Error: " + str(
             e) + "\nPlease make sure all of the necessary settings are configured!"), keep_on_top=True)
         return False
@@ -235,8 +241,9 @@ def parseConfiguration():
 
         if not config:
             print("1")
-            logger.error("-parseConfiguration- There is an issue with the configuration file or none is present. "
-                         "Opening configuration prompt.")
+            logger.error(
+                "-parseConfiguration- There is an issue with the configuration file or none is present in root directory. "
+                "Opening configuration prompt.")
             configurator(False)
         elif config and checkConfig():
             print("2")
@@ -252,7 +259,10 @@ def parseConfiguration():
         print(e)
         logger.exception("-parseConfiguration- + Configuration parsing exception. " + str(e))
         # configurator(False)
-    return configInput
+    try:
+        return configInput
+    except:
+        return False
 
 
 # Calculates the hash of the directory the python file is in.
@@ -313,6 +323,7 @@ def verifyCredentials():
     except Exception as e:
         print("Error verifying credentials. Error:\n", e)
         logger.exception("-verifyCredentials- There was an exception while verifying credentials. " + str(e))
+        return redirect(url_for("index"))
 
         #     window['title'].update(value='Invalid credentials were entered!', text_color='red')
         #     tray.show_message("Warning!", "You entered invalid credentials!")
@@ -361,6 +372,8 @@ def proccessWelcomeAction():
             startMongoNoCheck().KOADB.WeatherStations.delete_one({"_id": mongo_id})
             return openWelcomeScreen()
         elif actionSelected == "getlogs":
+            logger.info("-proccessWelcomeAction- User " + session[
+                "name"] + "is performing the following action: " + actionSelected + ".")
             return openLogScreen()
         elif actionSelected == "allreadings":
             logger.info("-proccessWelcomeAction- User " + session[
@@ -369,43 +382,55 @@ def proccessWelcomeAction():
     except Exception as e:
         print("Exception occurred performing the requesting action.", str(e))
         flash("Your requested action could not be performed at this time. Please see logs for details.")
-        logger.exception("-processWelcomeAction- There was an issue processing user " + session[
+        logger.exception("-processWelcomeAction- There was a critical error while processing user " + session[
             'name'] + "'s requested action. " + str(e))
 
 
 @app.route("/modifyAction/", methods=['POST'])
 def processModifyAction():
     print("-processModifyAction-")
-    stationName = request.form['name']
-    stationStreet = request.form['street']
-    stationMunicipality = request.form['municipality']
-    stationState = request.form['stationstate']
-    stationZip = request.form['zipcode']
-    mongo_id = getDocumentID("WeatherStations", "name", stationName)
-    weatherDict = {"name": stationName, "street": stationStreet,
-                   "municipality": stationMunicipality,
-                   "state": stationState,
-                   "zip code": stationZip}
-    print("Mongo Object ID:", mongo_id, "Station Updated:", weatherDict)
-    startMongoNoCheck().KOADB.WeatherStations.update_one({'_id': mongo_id}, {"$set": weatherDict},
-                                                         upsert=False)
-    return openWelcomeScreen()
+    try:
+
+        stationName = request.form['name']
+        stationStreet = request.form['street']
+        stationMunicipality = request.form['municipality']
+        stationState = request.form['stationstate']
+        stationZip = request.form['zipcode']
+        mongo_id = getDocumentID("WeatherStations", "name", stationName)
+        weatherDict = {"name": stationName, "street": stationStreet,
+                       "municipality": stationMunicipality,
+                       "state": stationState,
+                       "zip code": stationZip}
+        print("Mongo Object ID:", mongo_id, "Station Updated:", weatherDict)
+        logger.info(("-processModifyAction- User has updated station with Mongo Object ID: " + mongo_id + " Station Updated:" + weatherDict))
+        startMongoNoCheck().KOADB.WeatherStations.update_one({'_id': mongo_id}, {"$set": weatherDict},
+                                                             upsert=False)
+        return openWelcomeScreen()
+    except Exception as e:
+        logger.exception("-processModifyAction- There was an issue with the user's modification request. Exception caught: " + str(e))
+        flash("There was an issue processing your request. Please try again or return to the home screen.")
 
 
 @app.route("/addAction/", methods=['POST'])
 def processAddAction():
-    stationName = request.form['name']
-    stationStreet = request.form['street']
-    stationMunicipality = request.form['municipality']
-    stationState = request.form['stationstate']
-    stationZip = request.form['zipcode']
-    weatherDict = {"name": stationName, "street": stationStreet,
-                   "municipality": stationMunicipality,
-                   "state": stationState,
-                   "zip code": stationZip}
-    print("Station Added:", weatherDict)
-    startMongoNoCheck().KOADB.WeatherStations.insert_one(weatherDict)
-    return openWelcomeScreen()
+    try:
+        stationName = request.form['name']
+        stationStreet = request.form['street']
+        stationMunicipality = request.form['municipality']
+        stationState = request.form['stationstate']
+        stationZip = request.form['zipcode']
+        weatherDict = {"name": stationName, "street": stationStreet,
+                       "municipality": stationMunicipality,
+                       "state": stationState,
+                       "zip code": stationZip}
+        print("Station Added:", weatherDict)
+        startMongoNoCheck().KOADB.WeatherStations.insert_one(weatherDict)
+        logger.info("-processAddAction- User " + session['name'] +" has added a new weather station to the database. "
+                                                                  "Station info: "+ weatherDict)
+        return openWelcomeScreen()
+    except Exception as e:
+        flash("There was an issue processing your request. Please try again or return to the home screen.")
+        logger.exception("-processAddAction- There was an issue with the user's post request. Exception caught: " + str(e))
 
 
 @app.route("/register/", methods=['POST', 'GET'])
