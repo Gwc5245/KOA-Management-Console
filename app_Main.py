@@ -373,7 +373,7 @@ def proccessWelcomeAction():
             return openWelcomeScreen()
         elif actionSelected == "getlogs":
             logger.info("-proccessWelcomeAction- User " + session[
-                "name"] + "is performing the following action: " + actionSelected + ".")
+                "name"] + " is performing the following action: " + actionSelected + ".")
             return openLogScreen()
         elif actionSelected == "allreadings":
             logger.info("-proccessWelcomeAction- User " + session[
