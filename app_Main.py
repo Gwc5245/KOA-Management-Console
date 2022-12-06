@@ -77,10 +77,12 @@ def genConfigFile(db_url, in_port, m5_aws_access, m5_aws_secret):
         port = (int(in_port))
         cfg.add_section('M5Stack Configuration')
         # client = pymongo.MongoClient(db_url, server_api=ServerApi('1'))
+
     except Exception as e:
         print("There was an issue generating configuration file. Message:")
         print(e)
         logger.exception("Configuration file generation error. " + str(e))
+        return False, e
 
     cfg.set('MongoDB Configuration', 'client_connection', db_url)
     cfg.set('WebUI Configuration', 'web_ui_port', str(port))
@@ -89,6 +91,7 @@ def genConfigFile(db_url, in_port, m5_aws_access, m5_aws_secret):
     with open('KOAConsole.ini', 'w') as configfile:
         print(cfg.write(configfile))
         logger.info("Wrote configuration to KOAConsole.ini")
+    return True
 
 
 def openConfigurationFileSelection():
@@ -171,7 +174,7 @@ def checkConfig():
             "-checkConfig- There is a critical issue with the configuration file. Response received: " + str(e))
         sgd.Popup(("There is an issue with the configuration file:\n" + "Error: " + str(
             e) + "\nPlease make sure all of the necessary settings are configured!"), keep_on_top=True)
-        return False
+        return False, e
     clientPass = client_connection
     print("Client connected:", client)
     return True
@@ -204,9 +207,11 @@ def startMongoNoCheck():
     cfg.read('KOAConsole.ini')
     try:
         clientPass = cfg.get("MongoDB Configuration", "client_connection")
+
     except Exception as e:
         logger.exception("-startMongoNoCheck- There was an issue connecting to MongoDB. " + str(e))
         parseConfiguration()
+        return False, e
 
     return startMongo(clientPass)
 
@@ -257,17 +262,15 @@ def parseConfiguration():
             config = cfg.read('KOAConsole.ini')
             logger.info("-parseConfiguration- Configuration file read.")
             # cfg.get("client_connection", "web_ui_port")
-
+        return configInput
     except Exception as e:
         configurator(False)
         print("There was an issue reading the configuration file. Error message:")
         print(e)
-        logger.exception("-parseConfiguration- + Configuration parsing exception. " + str(e))
+        logger.exception(
+            "-parseConfiguration- + Configuration parsing exception. Launching configurator. Exception: " + str(e))
         # configurator(False)
-    try:
-        return configInput
-    except:
-        return False
+        return False, e
 
 
 # Calculates the hash of the directory the python file is in.
