@@ -7,6 +7,10 @@ import shutil
 from threading import Thread
 
 import PySimpleGUI as sgd
+import boto3
+import json
+
+from pymongo.server_api import ServerApi
 
 import bcrypt
 import pymongo as pymongo
@@ -235,7 +239,8 @@ def parseConfiguration():
         configInput = [cfg.get("MongoDB Configuration", "client_connection"),
                        cfg.get("WebUI Configuration", "web_ui_port"),
                        cfg.get("M5Stack Configuration", "m5_aws_access"),
-                       cfg.get("M5Stack Configuration", "m5_aws_secret")
+                       cfg.get("M5Stack Configuration", "m5_aws_secret"),
+                       cfg.get("M5Stack Configuration", "bucket_name"),
                        ]
         print("Configuration Read:", configInput)
 
@@ -402,12 +407,15 @@ def processModifyAction():
                        "state": stationState,
                        "zip code": stationZip}
         print("Mongo Object ID:", mongo_id, "Station Updated:", weatherDict)
-        logger.info(("-processModifyAction- User has updated station with Mongo Object ID: " + mongo_id + " Station Updated:" + weatherDict))
+        logger.info((
+                "-processModifyAction- User has updated station with Mongo Object ID: " + mongo_id + " Station Updated:" + weatherDict))
         startMongoNoCheck().KOADB.WeatherStations.update_one({'_id': mongo_id}, {"$set": weatherDict},
                                                              upsert=False)
         return openWelcomeScreen()
     except Exception as e:
-        logger.exception("-processModifyAction- There was an issue with the user's modification request. Exception caught: " + str(e))
+        logger.exception(
+            "-processModifyAction- There was an issue with the user's modification request. Exception caught: " + str(
+                e))
         flash("There was an issue processing your request. Please try again or return to the home screen.")
 
 
@@ -425,12 +433,13 @@ def processAddAction():
                        "zip code": stationZip}
         print("Station Added:", weatherDict)
         startMongoNoCheck().KOADB.WeatherStations.insert_one(weatherDict)
-        logger.info("-processAddAction- User " + session['name'] +" has added a new weather station to the database. "
-                                                                  "Station info: "+ weatherDict)
+        logger.info("-processAddAction- User " + session['name'] + " has added a new weather station to the database. "
+                                                                   "Station info: " + weatherDict)
         return openWelcomeScreen()
     except Exception as e:
         flash("There was an issue processing your request. Please try again or return to the home screen.")
-        logger.exception("-processAddAction- There was an issue with the user's post request. Exception caught: " + str(e))
+        logger.exception(
+            "-processAddAction- There was an issue with the user's post request. Exception caught: " + str(e))
 
 
 @app.route("/register/", methods=['POST', 'GET'])
@@ -713,88 +722,101 @@ if __name__ == "__main__":
 
     # print(thread)
 
-    
-    
-    
-    
-    
-#code from M5-Weather Station to access AWS, read data stored as files,
-#parse in JSON, and then push to Mongo starts from here downwards
 
-import boto3
-import json
+# code from M5-Weather Station to access AWS, read data stored as files,
+# parse in JSON, and then push to Mongo starts from here downwards
 
 
-import pymongo as pymongo
-from pymongo import MongoClient
-from pymongo.server_api import ServerApi
-
-#creating config parser and setting parameters
-config = configparser.ConfigParser()		
-AWS = ''
-clientInfo = ''
-access_key= ''
-secret_key = ''
-
-def configParse():
-    config.read("M5_Config.ini")
-    #gets parameters to be used as variables in code
-    Mongo = config['MongoConfig']
-    AWS = config['AWSConfig']
-    access_key = AWS["access_key"]
-    secret_key = AWS["secret_key"]
-    #setting variable for Mongo connection string
-    clientInfo = Mongo["clientInfo"]
-    #test to ensure config data is properly retrieved
-    print(access_key)
-    print(secret_key)
-    print(clientInfo)
-
-configParse()
+# # creating config parser and setting parameters
+# config = configparser.ConfigParser()
+# AWS = ''
+# clientInfo = ''
+# access_key = ''
+# secret_key = ''
+#
+#
+# def configParse():
+#     config.read("M5_Config.ini")
+#     # gets parameters to be used as variables in code
+#     Mongo = config['MongoConfig']
+#     AWS = config['AWSConfig']
+#     access_key = AWS["access_key"]
+#     secret_key = AWS["secret_key"]
+#     # setting variable for Mongo connection string
+#     clientInfo = Mongo["clientInfo"]
+#     # test to ensure config data is properly retrieved
+#     print(access_key)
+#     print(secret_key)
+#     print(clientInfo)
 
 
-#pymongo connection code
-Mongo = config['MongoConfig']
-clientInfo = Mongo["clientInfo"]
-print('Starting Mongo Connection...')
-client = pymongo.MongoClient(clientInfo, server_api = ServerApi('1'))
-db = client.KOADB
-collection = db.WeatherStationData
-#attempts to connect to Mongo deployment and prints out a statement corresponding to its success or failure
-try:
-    conn = MongoClient()
-    print("Successfully connected to MongoDB!")
-except:
-    print("Failed to Connect to MongoDB.")
+# configParse()
+#
+# # pymongo connection code
+# Mongo = config['MongoConfig']
+# clientInfo = Mongo["clientInfo"]
+# print('Starting Mongo Connection...')
+# client = pymongo.MongoClient(clientInfo, server_api=ServerApi('1'))
+# db = client.KOADB
+# collection = db.WeatherStationData
+# # attempts to connect to Mongo deployment and prints out a statement corresponding to its success or failure
+# try:
+#     conn = MongoClient()
+#     print("Successfully connected to MongoDB!")
+# except:
+#     print("Failed to Connect to MongoDB.")
 
 
-#establishes connection to AWS IAM role and contains permissions needed to access and read files within bucket
-AWS = config['AWSConfig']
-access_key = AWS["access_key"]
-secret_key = AWS["secret_key"]
-s3 = boto3.resource(
-    's3',
-    region_name = 'us-east-1',
-    aws_access_key_id = access_key,
-    aws_secret_access_key = secret_key
-)
+# establishes connection to AWS IAM role and contains permissions needed to access and read files within bucket
+def startAWSConnection():
+    try:
+        s3 = boto3.resource(
+            's3',
+            # TODO: Need to finish configurator to create configuration files and update checkConfig for new values.
+            region_name='us-east-1',
+            aws_access_key_id=cfg.get("M5Stack Configuration", "access_key"),
+            aws_secret_access_key=cfg.get("M5Stack Configuration", "secret_key")
+        )
+        return s3
+    except Exception as e:
+        print("There was a critical error establishing AWS client connection. Exception: " + str(e))
+        logger.exception("There was a critical error establishing AWS client connection. Exception: " + str(e))
+        return False, e
 
 
-#variable used to keep track of how many items (stored sensor readings) are in bucket
+# variable used to keep track of how many items (stored sensor readings) are in bucket
 item_count = 0
 
-#iterates over all files present in bucket, reads files, converts data to json, then parses and prints
-bucket = s3.Bucket('ist440w-m5-bucket')
 
-for obj in bucket.objects.all():
-    item_count = item_count + 1
-    key = obj.key                                           #reads file and acquires key_id used by AWS (basically primary keys) for each file
-    body = obj.get()['Body'].read().decode('utf-8')         #reads file and acquires the actual contents of each file       
-    parsed_data = json.loads(body)
-    collection.insert_one(parsed_data)
-#   print(parsed_data)
-#   print(parsed_data['date'])              #just had this here to test
+# iterates over all files present in bucket, reads files, converts data to json, and then returns parsed data.
+def getSensorReadingsFromAWS():
+    try:
+        awsBucket = cfg.get("M5Stack Configuration", "bucket_name")
+        bucket = startAWSConnection().Bucket(awsBucket)
+        logger.info("Fetched info from AWS bucket", awsBucket)
+        return bucket
+    except Exception as e:
+        print("There was a critical error fetching sensor readings from AWS bucket. Exception: " + str(e))
+        logger.exception("There was a critical error fetching sensor readings from AWS bucket. Exception: " + str(e))
+        return False, e
 
 
-
-print("There are", item_count, "items in the bucket.")
+# Inserts sensor data retrieve from getSensorReadingsFromAWS function into MongoDB collection.
+def depositSensorData():
+    try:
+        item_count = 0
+        for obj in getSensorReadingsFromAWS().objects.all():
+            item_count = item_count + 1
+            key = obj.key  # reads file and acquires key_id used by AWS (basically primary keys) for each file
+            body = obj.get()['Body'].read().decode('utf-8')  # reads file and acquires the actual contents of each file
+            parsed_data = json.loads(body)
+            startMongoNoCheck().KOADB['WeatherStationData'].insert_one(parsed_data)
+        print("There are", item_count, "items in the bucket.")
+        logger.info("Successfully inserted sensor data into MongoDB. " + item_count + " items were parsed.")
+        return True
+    #   print(parsed_data)
+    #   print(parsed_data['date'])              #just had this here to test
+    except Exception as e:
+        print("There was a critical issue depositing sensor data from AWS bucket. Exception: " + str(e))
+        logger.exception("There was a critical issue depositing sensor data from AWS bucket. Exception: " + str(e))
+        return False, e
