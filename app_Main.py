@@ -712,3 +712,89 @@ if __name__ == "__main__":
     # thread.start()
 
     # print(thread)
+
+    
+    
+    
+    
+    
+#code from M5-Weather Station to access AWS, read data stored as files,
+#parse in JSON, and then push to Mongo starts from here downwards
+
+import boto3
+import json
+
+
+import pymongo as pymongo
+from pymongo import MongoClient
+from pymongo.server_api import ServerApi
+
+#creating config parser and setting parameters
+config = configparser.ConfigParser()		
+AWS = ''
+clientInfo = ''
+access_key= ''
+secret_key = ''
+
+def configParse():
+    config.read("M5_Config.ini")
+    #gets parameters to be used as variables in code
+    Mongo = config['MongoConfig']
+    AWS = config['AWSConfig']
+    access_key = AWS["access_key"]
+    secret_key = AWS["secret_key"]
+    #setting variable for Mongo connection string
+    clientInfo = Mongo["clientInfo"]
+    #test to ensure config data is properly retrieved
+    print(access_key)
+    print(secret_key)
+    print(clientInfo)
+
+configParse()
+
+
+#pymongo connection code
+Mongo = config['MongoConfig']
+clientInfo = Mongo["clientInfo"]
+print('Starting Mongo Connection...')
+client = pymongo.MongoClient(clientInfo, server_api = ServerApi('1'))
+db = client.KOADB
+collection = db.WeatherStationData
+#attempts to connect to Mongo deployment and prints out a statement corresponding to its success or failure
+try:
+    conn = MongoClient()
+    print("Successfully connected to MongoDB!")
+except:
+    print("Failed to Connect to MongoDB.")
+
+
+#establishes connection to AWS IAM role and contains permissions needed to access and read files within bucket
+AWS = config['AWSConfig']
+access_key = AWS["access_key"]
+secret_key = AWS["secret_key"]
+s3 = boto3.resource(
+    's3',
+    region_name = 'us-east-1',
+    aws_access_key_id = access_key,
+    aws_secret_access_key = secret_key
+)
+
+
+#variable used to keep track of how many items (stored sensor readings) are in bucket
+item_count = 0
+
+#iterates over all files present in bucket, reads files, converts data to json, then parses and prints
+bucket = s3.Bucket('ist440w-m5-bucket')
+
+for obj in bucket.objects.all():
+    item_count = item_count + 1
+    key = obj.key                                           #reads file and acquires key_id used by AWS (basically primary keys) for each file
+    body = obj.get()['Body'].read().decode('utf-8')         #reads file and acquires the actual contents of each file       
+    parsed_data = json.loads(body)
+    collection.insert_one(parsed_data)
+#   print(parsed_data)
+#   print(parsed_data['date'])              #just had this here to test
+
+
+
+print("There are", item_count, "items in the bucket.")
