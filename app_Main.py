@@ -4,7 +4,11 @@ import logging
 import os
 import re
 import shutil
-from threading import Thread
+import signal
+
+from datetime import timedelta
+
+import threading, time, signal
 
 import PySimpleGUI as sgd
 import boto3
@@ -246,6 +250,7 @@ def parseConfiguration():
                        cfg.get("M5Stack Configuration", "m5_aws_access"),
                        cfg.get("M5Stack Configuration", "m5_aws_secret"),
                        cfg.get("M5Stack Configuration", "bucket_name"),
+                       cfg.get("M5Stack Configuration", "refreshInterval"),
                        ]
         print("Configuration Read:", configInput)
 
@@ -707,15 +712,31 @@ def create_app():
     return app
 
 
-if __name__ == "__main__":
-    #    test = getAllSensorReadings()
-    #   for x in test:
-    #        print(x)
+class ProgramKilled(Exception):
+    pass
 
-    parseConfiguration()
-    app1 = create_app()
-    Thread = Thread(target=app.run(port=port))
-    Thread.run()
+
+def signal_handler(signum, frame):
+    raise ProgramKilled
+
+
+class Job(threading.Thread):
+    def __init__(self, interval, execute, *args, **kwargs):
+        threading.Thread.__init__(self)
+        self.daemon = False
+        self.stopped = threading.Event()
+        self.interval = interval
+        self.execute = execute
+        self.args = args
+        self.kwargs = kwargs
+
+    def stop(self):
+        self.stopped.set()
+        self.join()
+
+    def run(self):
+        while not self.stopped.wait(self.interval.total_seconds()):
+            self.execute(*self.args, **self.kwargs)
 
     # clientAppMain = startMongoNoCheck()
     # print("Thread created.")
@@ -772,6 +793,7 @@ if __name__ == "__main__":
 
 # establishes connection to AWS IAM role and contains permissions needed to access and read files within bucket
 def startAWSConnection():
+    print("-startAWSConnection-")
     try:
         s3 = boto3.resource(
             's3',
@@ -780,10 +802,12 @@ def startAWSConnection():
             aws_access_key_id=cfg.get("M5Stack Configuration", "access_key"),
             aws_secret_access_key=cfg.get("M5Stack Configuration", "secret_key")
         )
+        logger.info("-startAWSConnection- Started AWS connection.")
         return s3
     except Exception as e:
         print("There was a critical error establishing AWS client connection. Exception: " + str(e))
-        logger.exception("There was a critical error establishing AWS client connection. Exception: " + str(e))
+        logger.exception(
+            "-startAWSConnection- There was a critical error establishing AWS client connection. Exception: " + str(e))
         return False, e
 
 
@@ -793,19 +817,22 @@ item_count = 0
 
 # iterates over all files present in bucket, reads files, converts data to json, and then returns parsed data.
 def getSensorReadingsFromAWS():
+    print("-getSensorReadingsFromAWS-")
     try:
         awsBucket = cfg.get("M5Stack Configuration", "bucket_name")
         bucket = startAWSConnection().Bucket(awsBucket)
-        logger.info("Fetched info from AWS bucket", awsBucket)
+        logger.info("-getSensorReadingsFromAWS- Fetched info from AWS bucket", awsBucket)
         return bucket
     except Exception as e:
         print("There was a critical error fetching sensor readings from AWS bucket. Exception: " + str(e))
-        logger.exception("There was a critical error fetching sensor readings from AWS bucket. Exception: " + str(e))
+        logger.exception("-getSensorReadingsFromAWS- There was a critical error fetching sensor readings from AWS "
+                         "bucket. Exception: " + str(e))
         return False, e
 
 
 # Inserts sensor data retrieve from getSensorReadingsFromAWS function into MongoDB collection.
 def depositSensorData():
+    print("-depositSensorData-")
     try:
         item_count = 0
         for obj in getSensorReadingsFromAWS().objects.all():
@@ -815,11 +842,43 @@ def depositSensorData():
             parsed_data = json.loads(body)
             startMongoNoCheck().KOADB['WeatherStationData'].insert_one(parsed_data)
         print("There are", item_count, "items in the bucket.")
-        logger.info("Successfully inserted sensor data into MongoDB. " + item_count + " items were parsed.")
+        logger.info(
+            "-depositSensorData- Successfully inserted sensor data into MongoDB. " + item_count + " items were parsed.")
         return True
     #   print(parsed_data)
     #   print(parsed_data['date'])              #just had this here to test
     except Exception as e:
         print("There was a critical issue depositing sensor data from AWS bucket. Exception: " + str(e))
-        logger.exception("There was a critical issue depositing sensor data from AWS bucket. Exception: " + str(e))
+        logger.exception("-depositSensorData- There was a critical issue depositing sensor data from AWS bucket. "
+                         "Exception: " + str(e))
         return False, e
+
+
+if __name__ == "__main__":
+    #    test = getAllSensorReadings()
+    #   for x in test:
+    #        print(x)
+
+    parseConfiguration()
+    app1 = create_app()
+
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
+    job = Job(interval=timedelta(seconds=int(cfg.get("M5Stack Configuration", "refreshInterval"))),
+              execute=depositSensorData)
+    logger.info("-__main__- Starting periodic sensor refresh service. ")
+    print("!!! -__main__- Starting periodic sensor refresh service. !!!")
+
+    job.start()
+    logger.info("-__main__- Starting Flask service. ")
+    Thread = threading.Thread(target=app.run(port=port))
+    Thread.start()
+    while True:
+        try:
+            time.sleep(1)
+        except ProgramKilled:
+            logger.exception("-__main__- Console program ended.")
+            print("Program killed: running cleanup code")
+
+            job.stop()
+            break
