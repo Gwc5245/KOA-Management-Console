@@ -1,3 +1,4 @@
+
 import configparser
 import hashlib
 import logging
@@ -5,6 +6,7 @@ import os
 import re
 import shutil
 import signal
+import tweepy
 
 from datetime import timedelta
 
@@ -710,6 +712,25 @@ def create_app():
     # app.register_blueprint(frontend)
 
     return app
+
+
+
+def tweet(message):
+    # Replace these with your own consumer and access keys
+    consumer_key = "8By2ZO7BJ6hc5uRag4JfYZUY2"
+    consumer_secret = "7bjouYWUiVzdtACz2ADkNWRNfdbr8xlT87hArlS7SZHC7vv1FN"
+    access_key = "1592304412877377538-8WUTIlD6AKUYydBczGsNvDH0lJTHu8"
+    access_secret = "yVRkM0CKt7xaOUJUa6Du368PYyEKsub3dUAgvzUxkRDCq"
+
+    # Set up the authentication
+    auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
+    auth.set_access_token(access_key, access_secret)
+
+    # Connect to the API
+    api = tweepy.API(auth)
+
+    # Post the message to Twitter
+    api.update_status(message)
 
 
 class ProgramKilled(Exception):
