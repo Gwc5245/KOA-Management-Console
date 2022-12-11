@@ -815,6 +815,7 @@ us_state_to_abbrev = {
 }
 
 
+# Returns MongoDB instance for Flask.
 def get_db():
     """
     Configuration method to return db instance
@@ -827,6 +828,7 @@ def get_db():
     return db
 
 
+# Adds configuration to Flask app.
 def create_app():
     app.config['DEBUG'] = True
     app.config['MONGO_URI'] = cfg.get("MongoDB Configuration", "client_connection")
@@ -894,7 +896,6 @@ def startAWSConnection():
     try:
         s3 = boto3.resource(
             's3',
-            # TODO: Need to finish configurator to create configuration files and update checkConfig for new values.
             region_name='us-east-1',
             aws_access_key_id=cfg.get("M5Stack Configuration", "access_key"),
             aws_secret_access_key=cfg.get("M5Stack Configuration", "secret_key")
