@@ -1,4 +1,3 @@
-
 import configparser
 import hashlib
 import logging
@@ -8,7 +7,7 @@ import shutil
 import signal
 import tweepy
 
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 import threading, time, signal
 
@@ -28,6 +27,8 @@ from flask import Flask, render_template, request, flash, url_for, redirect, ses
 from flask_pymongo import PyMongo
 from pymongo.server_api import ServerApi
 from remi.server import StandaloneServer, Server
+import pynguin
+from pathlib import Path
 
 app = Flask(__name__)
 app.secret_key = "super secret key"
@@ -56,8 +57,6 @@ def index():
 def run():
     app.run(debug=True, port=port, host="0.0.0.0")
 
-
-from pathlib import Path
 
 ROOT_DIR = os.path.realpath(os.path.join(os.path.dirname(__file__)))
 # Create and configure logger
@@ -519,20 +518,24 @@ def getSensors():
 
 def getAllSensorReadings():
     print("-getAllSensorReadings-")
-    sensors = []
-    sensors2 = []
-    for x in startMongoNoCheck().KOADB.WeatherStationData.find({}, {"_id": 0, "station": 1, "tempF": 1, "tempC": 1,
-                                                                    "humidity": 1, "pressure": 1, "time": 1,
-                                                                    "date": 1}):
-        sensors.append((x["station"], "Temperature:", str(x["tempF"]), "℉", str(x["tempC"]), "℃", "Humidity:",
-                        str(x["humidity"]) + "%", "Pressure:", str(x["pressure"]) + " in", "Time:",
-                        str(x["time"]), "Date:",
-                        str(x["date"]) + ""))
-    for s in sensors:
-        s = str(s).replace(',', '')
-        s = s.replace("'", "")
-        sensors2.append(s)
-    return sensors2
+    try:
+        sensors = []
+        sensors2 = []
+        for x in startMongoNoCheck().KOADB.WeatherStationData.find({}, {"_id": 0, "station": 1, "tempF": 1, "tempC": 1,
+                                                                        "humidity": 1, "pressure": 1, "time": 1,
+                                                                        "date": 1}):
+            sensors.append((x["station"], "Temperature:", str(x["tempF"]), "℉", str(x["tempC"]), "℃", "Humidity:",
+                            str(x["humidity"]) + "%", "Pressure:", str(x["pressure"]) + " in", "Time:",
+                            str(x["time"]), "Date:",
+                            str(x["date"]) + ""))
+        for s in sensors:
+            s = str(s).replace(',', '')
+            s = s.replace("'", "")
+            sensors2.append(s)
+        return sensors2
+    except Exception as e:
+        logger.exception("-getAllSensorReadings- There was a critical error when retrieving all sensor readings. "
+                         "Exception: " + str(e))
 
 
 def getSensorReading(sensor):
@@ -554,14 +557,77 @@ def getSensorReading(sensor):
 
         return sensorData
     except Exception as e:
-        print("An error occurred while getting a sensor reading for", sensor, " Error:\n", e)
-        return False
+        print("-getSensorReading- An error occurred while getting a sensor reading for ", sensor, " Error:\n", e)
+        return False, e
+
+
+def getAllSensorReadingLastThirtyMinutes():
+    print("-getAllSensorReadingLastThirtyMinutes-")
+
+    sensorData = []
+    try:
+        for x in startMongoNoCheck().KOADB.WeatherStationData.find({}, {"_id": 0, "station": 1, "tempF": 1, "tempC": 1,
+                                                                        "humidity": 1, "pressure": 1, "time": 1,
+                                                                        "date": 1}):
+
+            readingTime = datetime.strptime(str(x["time"]), '%H::%M::%S')
+            now = datetime.now()
+            duration = (now - readingTime).total_seconds() / 60.0
+
+            if duration <= 30:
+                sensorData.append({
+                    "Station": str(x["station"]),
+                    "Temperature℉": str(x["tempF"]),
+                    "Temperature℃": str(x["tempC"]),
+                    "Humidity": str(x["humidity"]),
+                    "Pressure": str(x["pressure"]),
+                    "Time": str(x["time"]),
+                    "Date": str(x["date"])})
+        return sensorData
+    except Exception as e:
+        print("-getAllSensorReadingLastThirtyMinutes- An error occurred while getting a sensor readings within last "
+              "thirty minutes Error:\n", e)
+        logger.exception(
+            "-getAllSensorReadingLastThirtyMinutes- An error occurred while getting a sensor readings within last "
+            "thirty minutes. Exception: " + str(e))
+        return False, e
+
+
+def iterateRecentStations():
+    print("-iterateRecentStations-")
+    try:
+        recentReadings = getAllSensorReadingLastThirtyMinutes()
+        highTempLimit = 100
+        lowTempLimit = 40
+        lowPressure = 29.80
+        highPressure = 30.20
+        logger.info(
+            "-iterateRecentStations- Beginning check for abnormal weather conditions in the last 30 minutes of readings.")
+        for x in recentReadings:
+            if int(x["Temperature℉"]) >= highTempLimit:
+                tweet("Station " + x["Station"] + " is reporting an abnormally high temperature of " + x[
+                    "Temperature℉"] + ".")
+            if int(x["Temperature℉"]) <= lowTempLimit:
+                tweet(
+                    "Station " + x[
+                        "Station"] + " is reporting temperatures that may create icy conditions. Temperature: " +
+                    x["Temperature℉"] + ".")
+            if float(x["Pressure"]) <= lowPressure:
+                tweet("Station " + x["Station"] + " is reporting a lower air pressure reading of " + x[
+                    "Pressure"] + "inHg. Indicating clear skies and calm weather is probable.")
+            if float(x["Pressure"]) >= highPressure:
+                tweet("Station " + x["Station"] + " is reporting a higher air pressure reading of " + x[
+                    "Pressure"] + "inHg. Indicating inclement weather is probable.")
+        logger.info("-iterateRecentStations- Successfully iterated through all recent readings and generated alerts.")
+    except Exception as e:
+        logger.exception(
+            "-iterateRecentStations- There was a critical error while checking recent readings. Exception: " + str(e))
 
 
 # Returns the current registered user utilizing the console.
 def getCurrentUser():
     print("-getCurrentUser-")
-    return _userName
+    return session["name"]
 
 
 # Salt hashes a plaint text password (str) using bcrypt's hashpw method.
@@ -714,7 +780,6 @@ def create_app():
     return app
 
 
-
 def tweet(message):
     # Replace these with your own consumer and access keys
     consumer_key = "8By2ZO7BJ6hc5uRag4JfYZUY2"
@@ -758,58 +823,6 @@ class Job(threading.Thread):
     def run(self):
         while not self.stopped.wait(self.interval.total_seconds()):
             self.execute(*self.args, **self.kwargs)
-
-    # clientAppMain = startMongoNoCheck()
-    # print("Thread created.")
-    # thread = Thread(target=startMongoNoCheck)
-    # print("Running Flask")
-    # thread.start()
-
-    # print(thread)
-
-
-# code from M5-Weather Station to access AWS, read data stored as files,
-# parse in JSON, and then push to Mongo starts from here downwards
-
-
-# # creating config parser and setting parameters
-# config = configparser.ConfigParser()
-# AWS = ''
-# clientInfo = ''
-# access_key = ''
-# secret_key = ''
-#
-#
-# def configParse():
-#     config.read("M5_Config.ini")
-#     # gets parameters to be used as variables in code
-#     Mongo = config['MongoConfig']
-#     AWS = config['AWSConfig']
-#     access_key = AWS["access_key"]
-#     secret_key = AWS["secret_key"]
-#     # setting variable for Mongo connection string
-#     clientInfo = Mongo["clientInfo"]
-#     # test to ensure config data is properly retrieved
-#     print(access_key)
-#     print(secret_key)
-#     print(clientInfo)
-
-
-# configParse()
-#
-# # pymongo connection code
-# Mongo = config['MongoConfig']
-# clientInfo = Mongo["clientInfo"]
-# print('Starting Mongo Connection...')
-# client = pymongo.MongoClient(clientInfo, server_api=ServerApi('1'))
-# db = client.KOADB
-# collection = db.WeatherStationData
-# # attempts to connect to Mongo deployment and prints out a statement corresponding to its success or failure
-# try:
-#     conn = MongoClient()
-#     print("Successfully connected to MongoDB!")
-# except:
-#     print("Failed to Connect to MongoDB.")
 
 
 # establishes connection to AWS IAM role and contains permissions needed to access and read files within bucket
@@ -862,6 +875,7 @@ def depositSensorData():
             body = obj.get()['Body'].read().decode('utf-8')  # reads file and acquires the actual contents of each file
             parsed_data = json.loads(body)
             startMongoNoCheck().KOADB['WeatherStationData'].insert_one(parsed_data)
+            startAWSConnection().Object('ist440w-m5-bucket', key).delete()
         print("There are", item_count, "items in the bucket.")
         logger.info(
             "-depositSensorData- Successfully inserted sensor data into MongoDB. " + item_count + " items were parsed.")
@@ -887,10 +901,13 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)
     job = Job(interval=timedelta(seconds=int(cfg.get("M5Stack Configuration", "refreshInterval"))),
               execute=depositSensorData)
+    job2 = Job(interval=timedelta(seconds=int(cfg.get("M5Stack Configuration", "refreshInterval"))),
+               execute=iterateRecentStations)
     logger.info("-__main__- Starting periodic sensor refresh service. ")
     print("!!! -__main__- Starting periodic sensor refresh service. !!!")
 
     job.start()
+    job2.start()
     logger.info("-__main__- Starting Flask service. ")
     Thread = threading.Thread(target=app.run(port=port))
     Thread.start()
