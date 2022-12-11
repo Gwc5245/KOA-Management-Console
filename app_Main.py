@@ -47,13 +47,13 @@ client = pymongo.MongoClient(
     server_api=ServerApi('1'))
 
 
-# print("Collections: ", db.list_collection_names())
-# print("MongoDB info: ", client.server_info())
 @app.route('/', methods=['GET', 'POST'])
+# Redirects the user to the login page.
 def index():
     return render_template('Login_UI.html')
 
 
+# Starts the Flask app service.
 def run():
     app.run(debug=True, port=port, host="0.0.0.0")
 
@@ -72,6 +72,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
 
+# Generates a configuration file with the specified parameters.
 def genConfigFile(db_url, in_port, m5_aws_access, m5_aws_secret):
     print("-genConfigFile-")
     try:
@@ -99,6 +100,8 @@ def genConfigFile(db_url, in_port, m5_aws_access, m5_aws_secret):
     return True
 
 
+# Uses PySimpleGUI to open a desktop file selection screen to select a configuration file.
+# Copies the configuration file to the directory as KOAConsole.ini and parses special characters.
 def openConfigurationFileSelection():
     print("-openConfigurationFileSelection-")
     logger.info("Opening configuration file selection window.")
@@ -156,10 +159,11 @@ def openConfigurationFileSelection():
 clientPass = ""
 
 
+# Checks the configuration file KOAConsole.INI to make sure all configuration categories and parameters are present.
+# If any are missing, returns False.
 def checkConfig():
     try:
         print("-checkConfig-")
-        # print("Configuration being checked:", config, type(config))
         print("Sections:", (cfg.sections()))
         portIn = (cfg.get('WebUI Configuration', "web_ui_port"))
         client_connection = (cfg.get("MongoDB Configuration", "client_connection"))
@@ -204,9 +208,9 @@ def checkConfig():
                 "-checkConfig- There was an issue with the configuration file: Twitter access_secret not found or is invalid.")
             return False
     except Exception as e:
-        print("There is an issue with the configuration file:", e)
+        print("There is an issue with the configuration file, Exception: ", e)
         logger.exception(
-            "-checkConfig- There is a critical issue with the configuration file. Response received: " + str(e))
+            "-checkConfig- There is a critical issue with the configuration file. Exception: " + str(e))
         sgd.Popup(("There is an issue with the configuration file:\n" + "Error: " + str(
             e) + "\nPlease make sure all of the necessary settings are configured!"), keep_on_top=True)
         return False, e
@@ -215,6 +219,7 @@ def checkConfig():
     return True
 
 
+# Initiates the MongoDB connection with the specified client parameters.
 def startMongo(client_connection):
     print("-startMongo-")
     print("Client information:", client_connection)
@@ -224,6 +229,9 @@ def startMongo(client_connection):
     return clientAppMain
 
 
+# Checks if configuration file is present.
+# If valid starts Mongo connection.
+# If no configuration file is located, opens up file selection screen.
 def configurator(fileLocated):
     print("-configurator-")
 
@@ -236,6 +244,7 @@ def configurator(fileLocated):
         startMongo(clientPass)
 
 
+# Initiates the mongo connection with startMongo and returns the connected client.
 def startMongoNoCheck():
     print("-startMongoNoCheck-")
     logger.info("-startMongoNoCheck- Contacting MongoDB database.")
@@ -256,20 +265,24 @@ def autoParse():
 
 
 @app.route('/ConsoleApplication.txt', methods=["GET"])
+# Adds log file to Flask.
 def logTXT(address=None):
     return app.send_static_file('ConsoleApplication.txt')
 
 
 @app.route('/static/KOAWeather.gif', methods=["GET"])
+# Adds logo to Flask.
 def logoGIF(address=None):
     return app.send_static_file('KOAWeather.gif')
 
 
 @app.route('/getlogs/', methods=["GET"])
+# Redirects the user to the web page displaying the readings from the log file.
 def openLogScreen():
     return render_template("consoleLog_UI.html")
 
 
+# Parses through the configuration file and initiates configuration check to validate configuration file.
 def parseConfiguration():
     print("-parseConfiguration-")
     try:
@@ -324,9 +337,6 @@ def calcHash():
     return hash_md5.hexdigest()
 
 
-# Management Console main class.
-
-
 _userName = ''
 menu = ['',
         ['Show Window', 'Hide Window', '---', '!Disabled Item', 'Change Icon', ['Happy', 'Sad', 'Plain'], 'Exit']]
@@ -338,6 +348,9 @@ state_names = [state.name for state in us.states.STATES_AND_TERRITORIES]
 
 
 @app.route('/login/', methods=['POST'])
+# Verifies the credentials entered by the user with those stored in MongoDB.
+# If valid, redirects user to the console main page.
+# If invalid, redirects user back to the login page.
 def verifyCredentials():
     print("-verifyCredentials-")
     try:
@@ -378,6 +391,8 @@ def verifyCredentials():
 
 
 @app.route("/logout")
+# Logs the user out of the console and closes the session.
+# Redirects user to the login page.
 def logout():
     logger.info("-logout- User sign-out: " + session["name"])
     session["name"] = None
@@ -385,12 +400,14 @@ def logout():
 
 
 @app.route("/login/", methods=['GET'])
+# Opens the login screen and makes sure the session is cleared out.
 def openLoginScreen():
     session["name"] = None
     return redirect(url_for("index"))
 
 
 @app.route("/consoleAction/", methods=['POST'])
+# Redirects user to the main console page and populates the fields with up-to-date data from MongoDB.
 def proccessWelcomeAction():
     print("-proccessWelcomeAction-")
     # stationSelected = request.form[""]
@@ -435,6 +452,7 @@ def proccessWelcomeAction():
 
 
 @app.route("/modifyAction/", methods=['POST'])
+# Processes the user's entries into the web page form for modifying an M5 sensor.
 def processModifyAction():
     print("-processModifyAction-")
     try:
@@ -463,6 +481,7 @@ def processModifyAction():
 
 
 @app.route("/addAction/", methods=['POST'])
+# Processes the user's entries into the web page form for adding an M5 sensor.
 def processAddAction():
     try:
         stationName = request.form['name']
@@ -486,6 +505,7 @@ def processAddAction():
 
 
 @app.route("/register/", methods=['POST', 'GET'])
+# Redirects user to the registration webpage and once all credentials are entered registers the user in MongoDB.
 def registerUser():
     print("-registerUser-")
     regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
@@ -536,6 +556,7 @@ def openWelcomeScreen():
 
 
 @app.route("/getAllSensorReadings/", methods=['GET'])
+# Redirects the people to the webpage that displays all the readings from the M5 sensors.
 def openAllSensorsScreen():
     print("-openAllSensorsScreen-")
     return render_template('allSensorReadings_UI.html', stationReadings=getAllSensorReadings())
@@ -550,6 +571,7 @@ def getSensors():
     return sensors
 
 
+# Fetches all the readings of the M5 sensors from MongoDB and returns them as an array.
 def getAllSensorReadings():
     print("-getAllSensorReadings-")
     try:
@@ -572,6 +594,7 @@ def getAllSensorReadings():
                          "Exception: " + str(e))
 
 
+# Fetches all the readings from the specified sensor and returns them as an array.
 def getSensorReading(sensor):
     print("-getSensorReading-")
 
@@ -595,6 +618,7 @@ def getSensorReading(sensor):
         return False, e
 
 
+# Fetches all the readings of the M5 sensors within the past 30 minutes from MongoDB and returns them as an array.
 def getAllSensorReadingLastThirtyMinutes():
     print("-getAllSensorReadingLastThirtyMinutes-")
 
@@ -627,6 +651,8 @@ def getAllSensorReadingLastThirtyMinutes():
         return False, e
 
 
+# Iterates through all the readings returned from getAllSensorReadingLastThirtyMinutes
+# Interacts with the tweet method to post notable sensor readings.
 def iterateRecentStations():
     print("-iterateRecentStations-")
     try:
@@ -719,6 +745,7 @@ def getDocumentID(collectionName, fieldName, fieldEntry):
     return cursor["_id"]
 
 
+# Retrieves a MongoDB document that matches the specified collection, field name, and the field's value.
 def retrieveMongoDocument(collectionName, searchFieldName, searchFieldValue):
     print("Searching for", searchFieldName, "with a value of", searchFieldValue, "in collection",
           collectionName + ".")
