@@ -29,6 +29,8 @@ from pymongo.server_api import ServerApi
 from remi.server import StandaloneServer, Server
 import pynguin
 from pathlib import Path
+import tweepy
+
 
 app = Flask(__name__)
 app.secret_key = "super secret key"
@@ -146,7 +148,7 @@ def openConfigurationFileSelection():
             configCheck = checkConfig()
 
             if configCheck:
-                config = parseConfiguration()
+                config = parseConfiguration('KOAConsole.ini')
                 logger.critical("New configuration saved and will be used by the program.")
                 window.close()
             elif not configCheck:
@@ -213,7 +215,7 @@ def checkConfig():
             "-checkConfig- There is a critical issue with the configuration file. Exception: " + str(e))
         sgd.Popup(("There is an issue with the configuration file:\n" + "Error: " + str(
             e) + "\nPlease make sure all of the necessary settings are configured!"), keep_on_top=True)
-        return False, e
+        return False
     clientPass = client_connection
     print("Client connected:", client)
     return True
@@ -221,13 +223,16 @@ def checkConfig():
 
 # Initiates the MongoDB connection with the specified client parameters.
 def startMongo(client_connection):
-    print("-startMongo-")
-    print("Client information:", client_connection)
-    clientAppMain = pymongo.MongoClient(
-        client_connection,
-        server_api=ServerApi('1'))
-    return clientAppMain
-
+    try:
+        print("-startMongo-")
+        print("Client information:", client_connection)
+        clientAppMain = pymongo.MongoClient(
+            client_connection,
+            server_api=ServerApi('1'))
+        return clientAppMain
+    except Exception as e:
+        logger.exception("-startMongo- Critical error while starting MongoDB client. Exception: " + str(e))
+        return False
 
 # Checks if configuration file is present.
 # If valid starts Mongo connection.
@@ -254,7 +259,7 @@ def startMongoNoCheck():
 
     except Exception as e:
         logger.exception("-startMongoNoCheck- There was an issue connecting to MongoDB. " + str(e))
-        parseConfiguration()
+        parseConfiguration('KOAConsole.ini')
         return False, e
 
     return startMongo(clientPass)
@@ -281,13 +286,13 @@ def logoGIF(address=None):
 def openLogScreen():
     return render_template("consoleLog_UI.html")
 
-
+config = ()
 # Parses through the configuration file and initiates configuration check to validate configuration file.
-def parseConfiguration():
+def parseConfiguration(cfgFile):
     print("-parseConfiguration-")
     try:
 
-        config = cfg.read('KOAConsole.ini')
+        config = cfg.read(cfgFile)
 
         configInput = [cfg.get("MongoDB Configuration", "client_connection"),
                        cfg.get("WebUI Configuration", "web_ui_port"),
@@ -323,7 +328,7 @@ def parseConfiguration():
         logger.exception(
             "-parseConfiguration- + Configuration parsing exception. Launching configurator. Exception: " + str(e))
         # configurator(False)
-        return False, e
+        return False, str(e)
 
 
 # Calculates the hash of the directory the python file is in.
@@ -958,7 +963,7 @@ if __name__ == "__main__":
     #   for x in test:
     #        print(x)
 
-    parseConfiguration()
+    parseConfiguration('KOAConsole.ini')
     app1 = create_app()
 
     signal.signal(signal.SIGTERM, signal_handler)
