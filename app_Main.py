@@ -31,7 +31,6 @@ import pynguin
 from pathlib import Path
 import tweepy
 
-
 app = Flask(__name__)
 app.secret_key = "super secret key"
 configFile = ()
@@ -234,6 +233,7 @@ def startMongo(client_connection):
         logger.exception("-startMongo- Critical error while starting MongoDB client. Exception: " + str(e))
         return False
 
+
 # Checks if configuration file is present.
 # If valid starts Mongo connection.
 # If no configuration file is located, opens up file selection screen.
@@ -286,7 +286,10 @@ def logoGIF(address=None):
 def openLogScreen():
     return render_template("consoleLog_UI.html")
 
+
 config = ()
+
+
 # Parses through the configuration file and initiates configuration check to validate configuration file.
 def parseConfiguration(cfgFile):
     print("-parseConfiguration-")
@@ -570,10 +573,15 @@ def openAllSensorsScreen():
 # Returns all the weather stations.
 def getSensors():
     print("-getSensors-")
-    sensors = []
-    for x in startMongoNoCheck().KOADB.WeatherStations.find({}, {"_id": 0, "name": 1}):
-        sensors.append(x["name"])
-    return sensors
+    try:
+        sensors = []
+        for x in startMongoNoCheck().KOADB.WeatherStations.find({}, {"_id": 0, "name": 1}):
+            sensors.append(x["name"])
+        return sensors
+    except Exception as e:
+        logger.exception("-getAllSensorReadings- There was a critical error when retrieving sensors. "
+                         "Exception: " + str(e))
+        return False, str(e)
 
 
 # Fetches all the readings of the M5 sensors from MongoDB and returns them as an array.
@@ -597,6 +605,7 @@ def getAllSensorReadings():
     except Exception as e:
         logger.exception("-getAllSensorReadings- There was a critical error when retrieving all sensor readings. "
                          "Exception: " + str(e))
+        return False, str(e)
 
 
 # Fetches all the readings from the specified sensor and returns them as an array.
@@ -620,7 +629,7 @@ def getSensorReading(sensor):
         return sensorData
     except Exception as e:
         print("-getSensorReading- An error occurred while getting a sensor reading for ", sensor, " Error:\n", e)
-        return False, e
+        return False, str(e)
 
 
 # Fetches all the readings of the M5 sensors within the past 30 minutes from MongoDB and returns them as an array.
@@ -653,7 +662,7 @@ def getAllSensorReadingLastThirtyMinutes():
         logger.exception(
             "-getAllSensorReadingLastThirtyMinutes- An error occurred while getting a sensor readings within last "
             "thirty minutes. Exception: " + str(e))
-        return False, e
+        return False, str(e)
 
 
 # Iterates through all the readings returned from getAllSensorReadingLastThirtyMinutes
