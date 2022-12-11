@@ -163,6 +163,11 @@ def checkConfig():
         print("Sections:", (cfg.sections()))
         portIn = (cfg.get('WebUI Configuration', "web_ui_port"))
         client_connection = (cfg.get("MongoDB Configuration", "client_connection"))
+        refreshInterval = cfg.get("M5Stack Configuration", "refreshInterval")
+        consumer_key = cfg.get("Twitter Configuration", "consumer_key")
+        consumer_secret = cfg.get("Twitter Configuration", "consumer_secret")
+        access_key = cfg.get("Twitter Configuration", "access_key")
+        access_secret = cfg.get("Twitter Configuration", "access_secret")
         print(client_connection, portIn)
         if not portIn:
             print("Port connection not found in configuration file.")
@@ -172,6 +177,31 @@ def checkConfig():
             print("Client connection not found in configuration file.")
             logger.error(
                 "-checkConfig- There was an issue with the configuration file: Mongo URI for ""client_connection"" not found or is invalid.")
+            return False
+        if not refreshInterval:
+            print("refreshInterval not found in configuration file.")
+            logger.error(
+                "-checkConfig- There was an issue with the configuration file: Refresh interval not found or is invalid.")
+            return False
+        if not consumer_key:
+            print("Twitter consumer_key not found in configuration file.")
+            logger.error(
+                "-checkConfig- There was an issue with the configuration file: Twitter consumer_key not found or is invalid.")
+            return False
+        if not consumer_secret:
+            print("Twitter consumer_secret not found in configuration file.")
+            logger.error(
+                "-checkConfig- There was an issue with the configuration file: Twitter consumer_secret not found or is invalid.")
+            return False
+        if not access_key:
+            print("Twitter access_key not found in configuration file.")
+            logger.error(
+                "-checkConfig- There was an issue with the configuration file: Twitter access_key not found or is invalid.")
+            return False
+        if not access_secret:
+            print("Twitter access_secret not found in configuration file.")
+            logger.error(
+                "-checkConfig- There was an issue with the configuration file: Twitter access_secret not found or is invalid.")
             return False
     except Exception as e:
         print("There is an issue with the configuration file:", e)
@@ -252,6 +282,10 @@ def parseConfiguration():
                        cfg.get("M5Stack Configuration", "m5_aws_secret"),
                        cfg.get("M5Stack Configuration", "bucket_name"),
                        cfg.get("M5Stack Configuration", "refreshInterval"),
+                       cfg.get("Twitter Configuration", "consumer_key"),
+                       cfg.get("Twitter Configuration", "consumer_secret"),
+                       cfg.get("Twitter Configuration", "access_key"),
+                       cfg.get("Twitter Configuration", "access_secret"),
                        ]
         print("Configuration Read:", configInput)
 
@@ -780,12 +814,13 @@ def create_app():
     return app
 
 
+# Tweets a message using the specified keys.
 def tweet(message):
     # Replace these with your own consumer and access keys
-    consumer_key = "8By2ZO7BJ6hc5uRag4JfYZUY2"
-    consumer_secret = "7bjouYWUiVzdtACz2ADkNWRNfdbr8xlT87hArlS7SZHC7vv1FN"
-    access_key = "1592304412877377538-8WUTIlD6AKUYydBczGsNvDH0lJTHu8"
-    access_secret = "yVRkM0CKt7xaOUJUa6Du368PYyEKsub3dUAgvzUxkRDCq"
+    consumer_key = cfg.get("Twitter Configuration", "consumer_key")
+    consumer_secret = cfg.get("Twitter Configuration", "consumer_secret")
+    access_key = cfg.get("Twitter Configuration", "access_key")
+    access_secret = cfg.get("Twitter Configuration", "access_secret")
 
     # Set up the authentication
     auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
@@ -806,6 +841,7 @@ def signal_handler(signum, frame):
     raise ProgramKilled
 
 
+# Creates the job handler that executes a specified method at the specified interval.
 class Job(threading.Thread):
     def __init__(self, interval, execute, *args, **kwargs):
         threading.Thread.__init__(self)
