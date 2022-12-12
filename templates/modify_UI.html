@@ -60,14 +60,7 @@
             <input type="text" name="municipality" id="municipality" value="{{ stationMunicipality }}">
             <br>
             <label for="stationstate">Station State:</label>
-            <select id="stationstate" name="stationstate" value="{{ stationState }}">
-                {% for each in stationStateList %}
-                <option value="{{value}}" {% if value== stationState %} selected {% endif %}>{{each}}</option>
-                {% endfor %}
-                <option selected="selected">
-                    {{ stationState }}
-                </option>
-            </select>
+           <input type="text" name="stationstate" id="stationstate" value="{{ stationState }}">
             <br>
             <label for="zipcode">Station Zipcode:</label>
             <input type="text" name="zipcode" id="zipcode" value="{{ stationZipcode }}">

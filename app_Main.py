@@ -5,9 +5,8 @@ import os
 import re
 import shutil
 import signal
-import tweepy
-
-from datetime import timedelta, datetime
+from bson import ObjectId
+from datetime import timedelta
 
 import threading, time, signal
 
@@ -27,9 +26,6 @@ from flask import Flask, render_template, request, flash, url_for, redirect, ses
 from flask_pymongo import PyMongo
 from pymongo.server_api import ServerApi
 from remi.server import StandaloneServer, Server
-import pynguin
-from pathlib import Path
-import tweepy
 
 app = Flask(__name__)
 app.secret_key = "super secret key"
@@ -48,16 +44,18 @@ client = pymongo.MongoClient(
     server_api=ServerApi('1'))
 
 
+# print("Collections: ", db.list_collection_names())
+# print("MongoDB info: ", client.server_info())
 @app.route('/', methods=['GET', 'POST'])
-# Redirects the user to the login page.
 def index():
     return render_template('Login_UI.html')
 
 
-# Starts the Flask app service.
 def run():
     app.run(debug=True, port=port, host="0.0.0.0")
 
+
+from pathlib import Path
 
 ROOT_DIR = os.path.realpath(os.path.join(os.path.dirname(__file__)))
 # Create and configure logger
@@ -73,7 +71,6 @@ logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
 
-# Generates a configuration file with the specified parameters.
 def genConfigFile(db_url, in_port, m5_aws_access, m5_aws_secret):
     print("-genConfigFile-")
     try:
@@ -101,8 +98,6 @@ def genConfigFile(db_url, in_port, m5_aws_access, m5_aws_secret):
     return True
 
 
-# Uses PySimpleGUI to open a desktop file selection screen to select a configuration file.
-# Copies the configuration file to the directory as KOAConsole.ini and parses special characters.
 def openConfigurationFileSelection():
     print("-openConfigurationFileSelection-")
     logger.info("Opening configuration file selection window.")
@@ -160,19 +155,13 @@ def openConfigurationFileSelection():
 clientPass = ""
 
 
-# Checks the configuration file KOAConsole.INI to make sure all configuration categories and parameters are present.
-# If any are missing, returns False.
 def checkConfig():
     try:
         print("-checkConfig-")
+        # print("Configuration being checked:", config, type(config))
         print("Sections:", (cfg.sections()))
         portIn = (cfg.get('WebUI Configuration', "web_ui_port"))
         client_connection = (cfg.get("MongoDB Configuration", "client_connection"))
-        refreshInterval = cfg.get("M5Stack Configuration", "refreshInterval")
-        consumer_key = cfg.get("Twitter Configuration", "consumer_key")
-        consumer_secret = cfg.get("Twitter Configuration", "consumer_secret")
-        access_key = cfg.get("Twitter Configuration", "access_key")
-        access_secret = cfg.get("Twitter Configuration", "access_secret")
         print(client_connection, portIn)
         if not portIn:
             print("Port connection not found in configuration file.")
@@ -183,60 +172,30 @@ def checkConfig():
             logger.error(
                 "-checkConfig- There was an issue with the configuration file: Mongo URI for ""client_connection"" not found or is invalid.")
             return False
-        if not refreshInterval:
-            print("refreshInterval not found in configuration file.")
-            logger.error(
-                "-checkConfig- There was an issue with the configuration file: Refresh interval not found or is invalid.")
-            return False
-        if not consumer_key:
-            print("Twitter consumer_key not found in configuration file.")
-            logger.error(
-                "-checkConfig- There was an issue with the configuration file: Twitter consumer_key not found or is invalid.")
-            return False
-        if not consumer_secret:
-            print("Twitter consumer_secret not found in configuration file.")
-            logger.error(
-                "-checkConfig- There was an issue with the configuration file: Twitter consumer_secret not found or is invalid.")
-            return False
-        if not access_key:
-            print("Twitter access_key not found in configuration file.")
-            logger.error(
-                "-checkConfig- There was an issue with the configuration file: Twitter access_key not found or is invalid.")
-            return False
-        if not access_secret:
-            print("Twitter access_secret not found in configuration file.")
-            logger.error(
-                "-checkConfig- There was an issue with the configuration file: Twitter access_secret not found or is invalid.")
-            return False
     except Exception as e:
-        print("There is an issue with the configuration file, Exception: ", e)
+        print("There is an issue with the configuration file:", e)
         logger.exception(
-            "-checkConfig- There is a critical issue with the configuration file. Exception: " + str(e))
+            "-checkConfig- There is a critical issue with the configuration file. Response received: " + str(e))
         sgd.Popup(("There is an issue with the configuration file:\n" + "Error: " + str(
             e) + "\nPlease make sure all of the necessary settings are configured!"), keep_on_top=True)
-        return False
+        return False, str(e)
     clientPass = client_connection
     print("Client connected:", client)
     return True
 
 
-# Initiates the MongoDB connection with the specified client parameters.
 def startMongo(client_connection):
+    print("-startMongo-")
     try:
-        print("-startMongo-")
         print("Client information:", client_connection)
         clientAppMain = pymongo.MongoClient(
             client_connection,
             server_api=ServerApi('1'))
         return clientAppMain
     except Exception as e:
-        logger.exception("-startMongo- Critical error while starting MongoDB client. Exception: " + str(e))
-        return False
+        return False, str(e)
 
 
-# Checks if configuration file is present.
-# If valid starts Mongo connection.
-# If no configuration file is located, opens up file selection screen.
 def configurator(fileLocated):
     print("-configurator-")
 
@@ -249,7 +208,6 @@ def configurator(fileLocated):
         startMongo(clientPass)
 
 
-# Initiates the mongo connection with startMongo and returns the connected client.
 def startMongoNoCheck():
     print("-startMongoNoCheck-")
     logger.info("-startMongoNoCheck- Contacting MongoDB database.")
@@ -260,42 +218,31 @@ def startMongoNoCheck():
     except Exception as e:
         logger.exception("-startMongoNoCheck- There was an issue connecting to MongoDB. " + str(e))
         parseConfiguration('KOAConsole.ini')
-        return False, e
+        return False, str(e)
 
     return startMongo(clientPass)
 
 
-def autoParse():
-    parseConfiguration(False)
-
-
 @app.route('/ConsoleApplication.txt', methods=["GET"])
-# Adds log file to Flask.
 def logTXT(address=None):
     return app.send_static_file('ConsoleApplication.txt')
 
 
 @app.route('/static/KOAWeather.gif', methods=["GET"])
-# Adds logo to Flask.
 def logoGIF(address=None):
     return app.send_static_file('KOAWeather.gif')
 
 
 @app.route('/getlogs/', methods=["GET"])
-# Redirects the user to the web page displaying the readings from the log file.
 def openLogScreen():
     return render_template("consoleLog_UI.html")
 
 
-config = ()
-
-
-# Parses through the configuration file and initiates configuration check to validate configuration file.
-def parseConfiguration(cfgFile):
+def parseConfiguration(configFile):
     print("-parseConfiguration-")
     try:
 
-        config = cfg.read(cfgFile)
+        config = cfg.read(configFile)
 
         configInput = [cfg.get("MongoDB Configuration", "client_connection"),
                        cfg.get("WebUI Configuration", "web_ui_port"),
@@ -303,10 +250,6 @@ def parseConfiguration(cfgFile):
                        cfg.get("M5Stack Configuration", "m5_aws_secret"),
                        cfg.get("M5Stack Configuration", "bucket_name"),
                        cfg.get("M5Stack Configuration", "refreshInterval"),
-                       cfg.get("Twitter Configuration", "consumer_key"),
-                       cfg.get("Twitter Configuration", "consumer_secret"),
-                       cfg.get("Twitter Configuration", "access_key"),
-                       cfg.get("Twitter Configuration", "access_secret"),
                        ]
         print("Configuration Read:", configInput)
 
@@ -345,6 +288,9 @@ def calcHash():
     return hash_md5.hexdigest()
 
 
+# Management Console main class.
+
+
 _userName = ''
 menu = ['',
         ['Show Window', 'Hide Window', '---', '!Disabled Item', 'Change Icon', ['Happy', 'Sad', 'Plain'], 'Exit']]
@@ -356,9 +302,6 @@ state_names = [state.name for state in us.states.STATES_AND_TERRITORIES]
 
 
 @app.route('/login/', methods=['POST'])
-# Verifies the credentials entered by the user with those stored in MongoDB.
-# If valid, redirects user to the console main page.
-# If invalid, redirects user back to the login page.
 def verifyCredentials():
     print("-verifyCredentials-")
     try:
@@ -399,8 +342,6 @@ def verifyCredentials():
 
 
 @app.route("/logout")
-# Logs the user out of the console and closes the session.
-# Redirects user to the login page.
 def logout():
     logger.info("-logout- User sign-out: " + session["name"])
     session["name"] = None
@@ -408,14 +349,12 @@ def logout():
 
 
 @app.route("/login/", methods=['GET'])
-# Opens the login screen and makes sure the session is cleared out.
 def openLoginScreen():
     session["name"] = None
     return redirect(url_for("index"))
 
 
 @app.route("/consoleAction/", methods=['POST'])
-# Redirects user to the main console page and populates the fields with up-to-date data from MongoDB.
 def proccessWelcomeAction():
     print("-proccessWelcomeAction-")
     # stationSelected = request.form[""]
@@ -440,10 +379,11 @@ def proccessWelcomeAction():
         elif actionSelected == "remove":
             mongo_id = getDocumentID("WeatherStations", "name", stationSelected)
             print("-Remove Station-")
+            print("Removing", mongo_id)
             logger.info("-proccessWelcomeAction- User " + session[
                 "name"] + "is performing the following action: " + actionSelected + " on station " + stationSelected)
-            startMongoNoCheck().KOADB.WeatherStations.delete_one({"_id": mongo_id})
-            return openWelcomeScreen()
+            print(startMongoNoCheck().KOADB.WeatherStations.delete_one({"_id": ObjectId(mongo_id)}))
+            return render_template('welcome_UI.html', dropdown_list=getSensors())
         elif actionSelected == "getlogs":
             logger.info("-proccessWelcomeAction- User " + session[
                 "name"] + " is performing the following action: " + actionSelected + ".")
@@ -460,7 +400,6 @@ def proccessWelcomeAction():
 
 
 @app.route("/modifyAction/", methods=['POST'])
-# Processes the user's entries into the web page form for modifying an M5 sensor.
 def processModifyAction():
     print("-processModifyAction-")
     try:
@@ -470,26 +409,30 @@ def processModifyAction():
         stationMunicipality = request.form['municipality']
         stationState = request.form['stationstate']
         stationZip = request.form['zipcode']
-        mongo_id = getDocumentID("WeatherStations", "name", stationName)
+        mongo_id = (getDocumentID("WeatherStations", "name", stationName))
         weatherDict = {"name": stationName, "street": stationStreet,
                        "municipality": stationMunicipality,
                        "state": stationState,
                        "zip code": stationZip}
         print("Mongo Object ID:", mongo_id, "Station Updated:", weatherDict)
         logger.info((
-                "-processModifyAction- User has updated station with Mongo Object ID: " + mongo_id + " Station Updated:" + weatherDict))
-        startMongoNoCheck().KOADB.WeatherStations.update_one({'_id': mongo_id}, {"$set": weatherDict},
+                "-processModifyAction- User has updated station with Mongo Object ID: " + mongo_id + " Station Updated:" + str(
+            weatherDict)))
+        startMongoNoCheck().KOADB.WeatherStations.update_one({'_id': ObjectId(mongo_id)}, {"$set": weatherDict},
                                                              upsert=False)
-        return openWelcomeScreen()
+        return render_template('welcome_UI.html', dropdown_list=getSensors())
     except Exception as e:
+        print(
+            "-processModifyAction- There was an issue with the user's modification request. Exception caught: " + str(
+                e))
         logger.exception(
             "-processModifyAction- There was an issue with the user's modification request. Exception caught: " + str(
                 e))
         flash("There was an issue processing your request. Please try again or return to the home screen.")
+        return render_template('welcome_UI.html', dropdown_list=getSensors())
 
 
 @app.route("/addAction/", methods=['POST'])
-# Processes the user's entries into the web page form for adding an M5 sensor.
 def processAddAction():
     try:
         stationName = request.form['name']
@@ -504,16 +447,17 @@ def processAddAction():
         print("Station Added:", weatherDict)
         startMongoNoCheck().KOADB.WeatherStations.insert_one(weatherDict)
         logger.info("-processAddAction- User " + session['name'] + " has added a new weather station to the database. "
-                                                                   "Station info: " + weatherDict)
-        return openWelcomeScreen()
+                                                                   "Station info: " + str(weatherDict))
+        return render_template('welcome_UI.html', dropdown_list=getSensors())
     except Exception as e:
+        print(
+            "-processAddAction- There was an issue with the user's post request. Exception caught: " + str(e))
         flash("There was an issue processing your request. Please try again or return to the home screen.")
         logger.exception(
             "-processAddAction- There was an issue with the user's post request. Exception caught: " + str(e))
 
 
 @app.route("/register/", methods=['POST', 'GET'])
-# Redirects user to the registration webpage and once all credentials are entered registers the user in MongoDB.
 def registerUser():
     print("-registerUser-")
     regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
@@ -564,7 +508,6 @@ def openWelcomeScreen():
 
 
 @app.route("/getAllSensorReadings/", methods=['GET'])
-# Redirects the people to the webpage that displays all the readings from the M5 sensors.
 def openAllSensorsScreen():
     print("-openAllSensorsScreen-")
     return render_template('allSensorReadings_UI.html', stationReadings=getAllSensorReadings())
@@ -579,36 +522,27 @@ def getSensors():
             sensors.append(x["name"])
         return sensors
     except Exception as e:
-        logger.exception("-getAllSensorReadings- There was a critical error when retrieving sensors. "
-                         "Exception: " + str(e))
         return False, str(e)
 
 
-# Fetches all the readings of the M5 sensors from MongoDB and returns them as an array.
 def getAllSensorReadings():
     print("-getAllSensorReadings-")
-    try:
-        sensors = []
-        sensors2 = []
-        for x in startMongoNoCheck().KOADB.WeatherStationData.find({}, {"_id": 0, "station": 1, "tempF": 1, "tempC": 1,
-                                                                        "humidity": 1, "pressure": 1, "time": 1,
-                                                                        "date": 1}):
-            sensors.append((x["station"], "Temperature:", str(x["tempF"]), "℉", str(x["tempC"]), "℃", "Humidity:",
-                            str(x["humidity"]) + "%", "Pressure:", str(x["pressure"]) + " in", "Time:",
-                            str(x["time"]), "Date:",
-                            str(x["date"]) + ""))
-        for s in sensors:
-            s = str(s).replace(',', '')
-            s = s.replace("'", "")
-            sensors2.append(s)
-        return sensors2
-    except Exception as e:
-        logger.exception("-getAllSensorReadings- There was a critical error when retrieving all sensor readings. "
-                         "Exception: " + str(e))
-        return False, str(e)
+    sensors = []
+    sensors2 = []
+    for x in startMongoNoCheck().KOADB.WeatherStationData.find({}, {"_id": 0, "station": 1, "tempF": 1, "tempC": 1,
+                                                                    "humidity": 1, "pressure": 1, "time": 1,
+                                                                    "date": 1}):
+        sensors.append((x["station"], "Temperature:", str(x["tempF"]), "℉", str(x["tempC"]), "℃", "Humidity:",
+                        str(x["humidity"]) + "%", "Pressure:", str(x["pressure"]) + " in", "Time:",
+                        str(x["time"]), "Date:",
+                        str(x["date"]) + ""))
+    for s in sensors:
+        s = str(s).replace(',', '')
+        s = s.replace("'", "")
+        sensors2.append(s)
+    return sensors2
 
 
-# Fetches all the readings from the specified sensor and returns them as an array.
 def getSensorReading(sensor):
     print("-getSensorReading-")
 
@@ -628,80 +562,14 @@ def getSensorReading(sensor):
 
         return sensorData
     except Exception as e:
-        print("-getSensorReading- An error occurred while getting a sensor reading for ", sensor, " Error:\n", e)
-        return False, str(e)
-
-
-# Fetches all the readings of the M5 sensors within the past 30 minutes from MongoDB and returns them as an array.
-def getAllSensorReadingLastThirtyMinutes():
-    print("-getAllSensorReadingLastThirtyMinutes-")
-
-    sensorData = []
-    try:
-        for x in startMongoNoCheck().KOADB.WeatherStationData.find({}, {"_id": 0, "station": 1, "tempF": 1, "tempC": 1,
-                                                                        "humidity": 1, "pressure": 1, "time": 1,
-                                                                        "date": 1}):
-
-            readingTime = datetime.strptime(str(x["time"]), '%H::%M::%S')
-            now = datetime.now()
-            duration = (now - readingTime).total_seconds() / 60.0
-
-            if duration <= 30:
-                sensorData.append({
-                    "Station": str(x["station"]),
-                    "Temperature℉": str(x["tempF"]),
-                    "Temperature℃": str(x["tempC"]),
-                    "Humidity": str(x["humidity"]),
-                    "Pressure": str(x["pressure"]),
-                    "Time": str(x["time"]),
-                    "Date": str(x["date"])})
-        return sensorData
-    except Exception as e:
-        print("-getAllSensorReadingLastThirtyMinutes- An error occurred while getting a sensor readings within last "
-              "thirty minutes Error:\n", e)
-        logger.exception(
-            "-getAllSensorReadingLastThirtyMinutes- An error occurred while getting a sensor readings within last "
-            "thirty minutes. Exception: " + str(e))
-        return False, str(e)
-
-
-# Iterates through all the readings returned from getAllSensorReadingLastThirtyMinutes
-# Interacts with the tweet method to post notable sensor readings.
-def iterateRecentStations():
-    print("-iterateRecentStations-")
-    try:
-        recentReadings = getAllSensorReadingLastThirtyMinutes()
-        highTempLimit = 100
-        lowTempLimit = 40
-        lowPressure = 29.80
-        highPressure = 30.20
-        logger.info(
-            "-iterateRecentStations- Beginning check for abnormal weather conditions in the last 30 minutes of readings.")
-        for x in recentReadings:
-            if int(x["Temperature℉"]) >= highTempLimit:
-                tweet("Station " + x["Station"] + " is reporting an abnormally high temperature of " + x[
-                    "Temperature℉"] + ".")
-            if int(x["Temperature℉"]) <= lowTempLimit:
-                tweet(
-                    "Station " + x[
-                        "Station"] + " is reporting temperatures that may create icy conditions. Temperature: " +
-                    x["Temperature℉"] + ".")
-            if float(x["Pressure"]) <= lowPressure:
-                tweet("Station " + x["Station"] + " is reporting a lower air pressure reading of " + x[
-                    "Pressure"] + "inHg. Indicating clear skies and calm weather is probable.")
-            if float(x["Pressure"]) >= highPressure:
-                tweet("Station " + x["Station"] + " is reporting a higher air pressure reading of " + x[
-                    "Pressure"] + "inHg. Indicating inclement weather is probable.")
-        logger.info("-iterateRecentStations- Successfully iterated through all recent readings and generated alerts.")
-    except Exception as e:
-        logger.exception(
-            "-iterateRecentStations- There was a critical error while checking recent readings. Exception: " + str(e))
+        print("An error occurred while getting a sensor reading for", sensor, " Error:\n", e)
+        return False
 
 
 # Returns the current registered user utilizing the console.
 def getCurrentUser():
     print("-getCurrentUser-")
-    return session["name"]
+    return _userName
 
 
 # Salt hashes a plaint text password (str) using bcrypt's hashpw method.
@@ -756,10 +624,9 @@ def check_password_mongoDB(entry, userEquate):
 def getDocumentID(collectionName, fieldName, fieldEntry):
     collection = startMongoNoCheck().KOADB[collectionName]
     cursor = collection.find_one({fieldName: fieldEntry})
-    return cursor["_id"]
+    return str(cursor["_id"])
 
 
-# Retrieves a MongoDB document that matches the specified collection, field name, and the field's value.
 def retrieveMongoDocument(collectionName, searchFieldName, searchFieldValue):
     print("Searching for", searchFieldName, "with a value of", searchFieldValue, "in collection",
           collectionName + ".")
@@ -829,7 +696,6 @@ us_state_to_abbrev = {
 }
 
 
-# Returns MongoDB instance for Flask.
 def get_db():
     """
     Configuration method to return db instance
@@ -842,7 +708,6 @@ def get_db():
     return db
 
 
-# Adds configuration to Flask app.
 def create_app():
     app.config['DEBUG'] = True
     app.config['MONGO_URI'] = cfg.get("MongoDB Configuration", "client_connection")
@@ -857,25 +722,6 @@ def create_app():
     return app
 
 
-# Tweets a message using the specified keys.
-def tweet(message):
-    # Replace these with your own consumer and access keys
-    consumer_key = cfg.get("Twitter Configuration", "consumer_key")
-    consumer_secret = cfg.get("Twitter Configuration", "consumer_secret")
-    access_key = cfg.get("Twitter Configuration", "access_key")
-    access_secret = cfg.get("Twitter Configuration", "access_secret")
-
-    # Set up the authentication
-    auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
-    auth.set_access_token(access_key, access_secret)
-
-    # Connect to the API
-    api = tweepy.API(auth)
-
-    # Post the message to Twitter
-    api.update_status(message)
-
-
 class ProgramKilled(Exception):
     pass
 
@@ -884,7 +730,6 @@ def signal_handler(signum, frame):
     raise ProgramKilled
 
 
-# Creates the job handler that executes a specified method at the specified interval.
 class Job(threading.Thread):
     def __init__(self, interval, execute, *args, **kwargs):
         threading.Thread.__init__(self)
@@ -902,6 +747,58 @@ class Job(threading.Thread):
     def run(self):
         while not self.stopped.wait(self.interval.total_seconds()):
             self.execute(*self.args, **self.kwargs)
+
+    # clientAppMain = startMongoNoCheck()
+    # print("Thread created.")
+    # thread = Thread(target=startMongoNoCheck)
+    # print("Running Flask")
+    # thread.start()
+
+    # print(thread)
+
+
+# code from M5-Weather Station to access AWS, read data stored as files,
+# parse in JSON, and then push to Mongo starts from here downwards
+
+
+# # creating config parser and setting parameters
+# config = configparser.ConfigParser()
+# AWS = ''
+# clientInfo = ''
+# access_key = ''
+# secret_key = ''
+#
+#
+# def configParse():
+#     config.read("M5_Config.ini")
+#     # gets parameters to be used as variables in code
+#     Mongo = config['MongoConfig']
+#     AWS = config['AWSConfig']
+#     access_key = AWS["access_key"]
+#     secret_key = AWS["secret_key"]
+#     # setting variable for Mongo connection string
+#     clientInfo = Mongo["clientInfo"]
+#     # test to ensure config data is properly retrieved
+#     print(access_key)
+#     print(secret_key)
+#     print(clientInfo)
+
+
+# configParse()
+#
+# # pymongo connection code
+# Mongo = config['MongoConfig']
+# clientInfo = Mongo["clientInfo"]
+# print('Starting Mongo Connection...')
+# client = pymongo.MongoClient(clientInfo, server_api=ServerApi('1'))
+# db = client.KOADB
+# collection = db.WeatherStationData
+# # attempts to connect to Mongo deployment and prints out a statement corresponding to its success or failure
+# try:
+#     conn = MongoClient()
+#     print("Successfully connected to MongoDB!")
+# except:
+#     print("Failed to Connect to MongoDB.")
 
 
 # establishes connection to AWS IAM role and contains permissions needed to access and read files within bucket
@@ -953,7 +850,6 @@ def depositSensorData():
             body = obj.get()['Body'].read().decode('utf-8')  # reads file and acquires the actual contents of each file
             parsed_data = json.loads(body)
             startMongoNoCheck().KOADB['WeatherStationData'].insert_one(parsed_data)
-            startAWSConnection().Object('ist440w-m5-bucket', key).delete()
         print("There are", item_count, "items in the bucket.")
         logger.info(
             "-depositSensorData- Successfully inserted sensor data into MongoDB. " + item_count + " items were parsed.")
@@ -979,13 +875,10 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)
     job = Job(interval=timedelta(seconds=int(cfg.get("M5Stack Configuration", "refreshInterval"))),
               execute=depositSensorData)
-    job2 = Job(interval=timedelta(seconds=int(cfg.get("M5Stack Configuration", "refreshInterval"))),
-               execute=iterateRecentStations)
     logger.info("-__main__- Starting periodic sensor refresh service. ")
     print("!!! -__main__- Starting periodic sensor refresh service. !!!")
 
     job.start()
-    job2.start()
     logger.info("-__main__- Starting Flask service. ")
     Thread = threading.Thread(target=app.run(port=port))
     Thread.start()

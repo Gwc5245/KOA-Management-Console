@@ -49,7 +49,7 @@ class TestAppMain(unittest.TestCase):
     @patch("app_Main.sgd.Popup", negator)
     # Tests whether function successfully can detect an invalid configuration file.
     def test_checkConfig(self):
-        self.assertEqual(appMain.checkConfig(), (False))
+        self.assertEqual(appMain.checkConfig(), (False,"No section: 'WebUI Configuration'"))
 
     # Tests whether startMongo method handles an invalid client configuration correctly.
     # This should return false if there is an invalid MongoDB URI.
@@ -57,7 +57,7 @@ class TestAppMain(unittest.TestCase):
         client = pymongo.MongoClient("mongodb+srv://<AWS access key>:<AWS secret key>@cluster0"
                                      ".re3ie7p.mongodb.net/?authSource=%24external&authMechanism=MONGODB-AWS&retryWrites=true"
                                      "&w=majority", server_api=ServerApi('1'))
-        self.assertEqual(appMain.startMongo(client), (False))
+        self.assertEqual(appMain.startMongo(client), (False,"'MongoClient' object is not iterable"))
 
     # Tests the parseConfiguration method whether it will catch an invalid configuration.
     # A blank configuration file is passed as the test configuration.
@@ -67,6 +67,7 @@ class TestAppMain(unittest.TestCase):
 
     # Tests the startMongoNoCheck method for detection of an invalid Mongo database.
     # If the database is not present this should return that there is no KOADB collection in the Mongo cluster.
+    # This method should return false along with the exception thrown.
     @patch("app_Main.startMongoNoCheck", negator)
     def test_getSensors(self):
         self.assertEqual(appMain.getSensors(), (False, "'NoneType' object has no attribute 'KOADB'"))
