@@ -532,6 +532,7 @@ def getAllSensorReadings():
     for x in startMongoNoCheck().KOADB.WeatherStationData.find({}, {"_id": 0, "station": 1, "tempF": 1, "tempC": 1,
                                                                     "humidity": 1, "pressure": 1, "time": 1,
                                                                     "date": 1}):
+        print(x)
         sensors.append((x["station"], "Temperature:", str(x["tempF"]), "℉", str(x["tempC"]), "℃", "Humidity:",
                         str(x["humidity"]) + "%", "Pressure:", str(x["pressure"]) + " in", "Time:",
                         str(x["time"]), "Date:",
@@ -747,58 +748,6 @@ class Job(threading.Thread):
     def run(self):
         while not self.stopped.wait(self.interval.total_seconds()):
             self.execute(*self.args, **self.kwargs)
-
-    # clientAppMain = startMongoNoCheck()
-    # print("Thread created.")
-    # thread = Thread(target=startMongoNoCheck)
-    # print("Running Flask")
-    # thread.start()
-
-    # print(thread)
-
-
-# code from M5-Weather Station to access AWS, read data stored as files,
-# parse in JSON, and then push to Mongo starts from here downwards
-
-
-# # creating config parser and setting parameters
-# config = configparser.ConfigParser()
-# AWS = ''
-# clientInfo = ''
-# access_key = ''
-# secret_key = ''
-#
-#
-# def configParse():
-#     config.read("M5_Config.ini")
-#     # gets parameters to be used as variables in code
-#     Mongo = config['MongoConfig']
-#     AWS = config['AWSConfig']
-#     access_key = AWS["access_key"]
-#     secret_key = AWS["secret_key"]
-#     # setting variable for Mongo connection string
-#     clientInfo = Mongo["clientInfo"]
-#     # test to ensure config data is properly retrieved
-#     print(access_key)
-#     print(secret_key)
-#     print(clientInfo)
-
-
-# configParse()
-#
-# # pymongo connection code
-# Mongo = config['MongoConfig']
-# clientInfo = Mongo["clientInfo"]
-# print('Starting Mongo Connection...')
-# client = pymongo.MongoClient(clientInfo, server_api=ServerApi('1'))
-# db = client.KOADB
-# collection = db.WeatherStationData
-# # attempts to connect to Mongo deployment and prints out a statement corresponding to its success or failure
-# try:
-#     conn = MongoClient()
-#     print("Successfully connected to MongoDB!")
-# except:
-#     print("Failed to Connect to MongoDB.")
 
 
 # establishes connection to AWS IAM role and contains permissions needed to access and read files within bucket
