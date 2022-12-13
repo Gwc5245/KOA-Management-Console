@@ -5,8 +5,10 @@ import os
 import re
 import shutil
 import signal
+
+import tweepy
 from bson import ObjectId
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 import threading, time, signal
 
@@ -238,11 +240,12 @@ def openLogScreen():
     return render_template("consoleLog_UI.html")
 
 
-def parseConfiguration(configFile):
+# Parses through the configuration file and initiates configuration check to validate configuration file.
+def parseConfiguration(cfgFile):
     print("-parseConfiguration-")
     try:
 
-        config = cfg.read(configFile)
+        config = cfg.read(cfgFile)
 
         configInput = [cfg.get("MongoDB Configuration", "client_connection"),
                        cfg.get("WebUI Configuration", "web_ui_port"),
@@ -250,6 +253,10 @@ def parseConfiguration(configFile):
                        cfg.get("M5Stack Configuration", "m5_aws_secret"),
                        cfg.get("M5Stack Configuration", "bucket_name"),
                        cfg.get("M5Stack Configuration", "refreshInterval"),
+                       cfg.get("Twitter Configuration", "consumer_key"),
+                       cfg.get("Twitter Configuration", "consumer_secret"),
+                       cfg.get("Twitter Configuration", "access_key"),
+                       cfg.get("Twitter Configuration", "access_secret"),
                        ]
         print("Configuration Read:", configInput)
 
@@ -354,6 +361,8 @@ def openLoginScreen():
     return redirect(url_for("index"))
 
 
+
+
 @app.route("/consoleAction/", methods=['POST'])
 def proccessWelcomeAction():
     print("-proccessWelcomeAction-")
@@ -392,6 +401,10 @@ def proccessWelcomeAction():
             logger.info("-proccessWelcomeAction- User " + session[
                 "name"] + "is performing the following action: " + actionSelected)
             return openAllSensorsScreen()
+        elif actionSelected == "sensorReadings":
+            logger.info("-proccessWelcomeAction- User " + session[
+                "name"] + "is performing the following action: " + actionSelected + " on sensor " + stationSelected)
+            return openSensorReadingScreen(stationSelected)
     except Exception as e:
         print("Exception occurred performing the requesting action.", str(e))
         flash("Your requested action could not be performed at this time. Please see logs for details.")
@@ -513,6 +526,12 @@ def openAllSensorsScreen():
     return render_template('allSensorReadings_UI.html', stationReadings=getAllSensorReadings())
 
 
+@app.route("/getSensorReadings/", methods=['GET'])
+def openSensorReadingScreen(station):
+    print("-openAllSensorsScreen-")
+    return render_template('sensorReadings_UI.html', stationReadings=getSensorReading(station))
+
+
 # Returns all the weather stations.
 def getSensors():
     print("-getSensors-")
@@ -541,7 +560,7 @@ def getAllSensorReadings():
         s = str(s).replace(',', '')
         s = s.replace("'", "")
         sensors2.append(s)
-    return sensors2
+    return sensors2[::-1]
 
 
 def getSensorReading(sensor):
@@ -561,10 +580,82 @@ def getSensorReading(sensor):
                 "Time": str(x["time"]),
                 "Date": str(x["date"])})
 
-        return sensorData
+        return sensorData[::-1]
     except Exception as e:
         print("An error occurred while getting a sensor reading for", sensor, " Error:\n", e)
         return False
+
+
+# Fetches all the readings of the M5 sensors within the past 30 minutes from MongoDB and returns them as an array.
+def getAllSensorReadingLastThirtyMinutes():
+    print("-getAllSensorReadingLastThirtyMinutes-")
+
+    sensorData = []
+    try:
+        for x in startMongoNoCheck().KOADB.WeatherStationData.find({}, {"_id": 0, "station": 1, "tempF": 1, "tempC": 1,
+                                                                        "humidity": 1, "pressure": 1, "time": 1,
+                                                                        "date": 1}):
+
+            readingTime = datetime.strptime(str(x["time"]), '%H::%M::%S')
+            now = datetime.now()
+            duration = (now - readingTime).total_seconds() / 60.0
+
+            if duration <= 30:
+                sensorData.append({
+                    "Station": str(x["station"]),
+                    "Temperature℉": str(x["tempF"]),
+                    "Temperature℃": str(x["tempC"]),
+                    "Humidity": str(x["humidity"]),
+                    "Pressure": str(x["pressure"]),
+                    "Time": str(x["time"]),
+                    "Date": str(x["date"])})
+        return sensorData[::-1]
+    except Exception as e:
+        print("-getAllSensorReadingLastThirtyMinutes- An error occurred while getting a sensor readings within last "
+              "thirty minutes Error:\n", e)
+        logger.exception(
+            "-getAllSensorReadingLastThirtyMinutes- An error occurred while getting a sensor readings within last "
+            "thirty minutes. Exception: " + str(e))
+        return False, e
+
+
+# Iterates through all the readings returned from getAllSensorReadingLastThirtyMinutes
+# Interacts with the tweet method to post notable sensor readings.
+def iterateRecentStations():
+    print("-iterateRecentStations-")
+    try:
+        recentReadings = getAllSensorReadingLastThirtyMinutes()
+        highTempLimit = 100
+        lowTempLimit = 40
+        lowPressure = 29.80
+        highPressure = 30.20
+        logger.info(
+            "-iterateRecentStations- Beginning check for abnormal weather conditions in the last 30 minutes of readings.")
+        for x in recentReadings:
+            if int(x["Temperature℉"]) >= highTempLimit:
+                tweet("Station " + x["Station"] + " is reporting an abnormally high temperature of " + x[
+                    "Temperature℉"] + ".")
+            if int(x["Temperature℉"]) <= lowTempLimit:
+                tweet(
+                    "Station " + x[
+                        "Station"] + " is reporting temperatures that may create icy conditions. Temperature: " +
+                    x["Temperature℉"] + ".")
+            if float(x["Pressure"]) <= lowPressure:
+                tweet("Station " + x["Station"] + " is reporting a lower air pressure reading of " + x[
+                    "Pressure"] + "inHg. Indicating clear skies and calm weather is probable.")
+            if float(x["Pressure"]) >= highPressure:
+                tweet("Station " + x["Station"] + " is reporting a higher air pressure reading of " + x[
+                    "Pressure"] + "inHg. Indicating inclement weather is probable.")
+        logger.info("-iterateRecentStations- Successfully iterated through all recent readings and generated alerts.")
+    except Exception as e:
+        logger.exception(
+            "-iterateRecentStations- There was a critical error while checking recent readings. Exception: " + str(e))
+
+
+# Returns the current registered user utilizing the console.
+def getCurrentUser():
+    print("-getCurrentUser-")
+    return session["name"]
 
 
 # Returns the current registered user utilizing the console.
@@ -633,6 +724,25 @@ def retrieveMongoDocument(collectionName, searchFieldName, searchFieldValue):
           collectionName + ".")
     cursor = [i for i in startMongoNoCheck().KOADB[collectionName].find({searchFieldName: (searchFieldValue)})]
     return cursor
+
+
+# Tweets a message using the specified keys.
+def tweet(message):
+    # Replace these with your own consumer and access keys
+    consumer_key = cfg.get("Twitter Configuration", "consumer_key")
+    consumer_secret = cfg.get("Twitter Configuration", "consumer_secret")
+    access_key = cfg.get("Twitter Configuration", "access_key")
+    access_secret = cfg.get("Twitter Configuration", "access_secret")
+
+    # Set up the authentication
+    auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
+    auth.set_access_token(access_key, access_secret)
+
+    # Connect to the API
+    api = tweepy.API(auth)
+
+    # Post the message to Twitter
+    api.update_status(message)
 
 
 # Source: https://gist.github.com/rogerallen/1583593
@@ -824,10 +934,13 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)
     job = Job(interval=timedelta(seconds=int(cfg.get("M5Stack Configuration", "refreshInterval"))),
               execute=depositSensorData)
+    job2 = Job(interval=timedelta(seconds=int(cfg.get("M5Stack Configuration", "refreshInterval"))),
+               execute=iterateRecentStations)
     logger.info("-__main__- Starting periodic sensor refresh service. ")
     print("!!! -__main__- Starting periodic sensor refresh service. !!!")
 
     job.start()
+    job2.start()
     logger.info("-__main__- Starting Flask service. ")
     Thread = threading.Thread(target=app.run(port=port))
     Thread.start()

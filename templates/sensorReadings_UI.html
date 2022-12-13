@@ -1,0 +1,81 @@
+<!doctype html>
+<html>
+{% with messages = get_flashed_messages() %}
+{% if messages %}
+{% for msgs in messages %}
+<div class="alert alert-info" role="alert">
+    {{msgs}}
+</div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+<head>
+    <meta charset="utf-8">
+    <title>Login</title>
+    <style type="text/css">
+        .LoginTitle {
+            font-family: Cambria, Hoefler Text, Liberation Serif, Times, Times New Roman, serif;
+        }
+
+        .EnterCredentialsLabel {
+            font-family: Cambria, Hoefler Text, Liberation Serif, Times, Times New Roman, serif;
+        }
+
+        .usernameLabel {
+            font-family: Cambria, Hoefler Text, Liberation Serif, Times, Times New Roman, serif;
+        }
+
+        .passwordLabel {
+            font-family: Cambria, Hoefler Text, Liberation Serif, Times, Times New Roman, serif;
+        }
+
+        .noAccountLabel {
+            font-family: Cambria, Hoefler Text, Liberation Serif, Times, Times New Roman, serif;
+        }
+    </style>
+</head>
+
+<body>
+<header class="LoginTitle">
+    <h1>
+        <center>
+            <p><img src="../static/KOAWeather.gif" width="500" height="500" alt=""/></p>
+            <p>KOA Management Console</p>
+        </center>
+    </h1>
+</header>
+<center>
+    <section>
+        <p class="consoleActionSelection">Weather Station Readings</p>
+        <p class="consoleActionSelection">Sensor readings are in descending order.</p>
+		
+      <a href="/forward">Home</a>
+		
+    </section>
+    <form action="/getAllSensorReadings/" method="GET">
+<center>
+<section class="sensorReadingsSection" id="sensorReadingsSection"><table width="200" border="1">
+
+	<table>
+ <tr>
+  <th> Station Readings </th>
+ 
+ </tr>
+    {%for readings in stationReadings%}
+    
+  <tr>
+    <td> {{readings}} </td>
+    
+  </tr>
+  {%endfor%}
+
+</section></center>
+    </form>
+
+</center>
+	<br>
+	
+<br>
+</body>
+
+</html>
