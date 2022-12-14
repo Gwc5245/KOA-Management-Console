@@ -73,33 +73,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
 
-def genConfigFile(db_url, in_port, m5_aws_access, m5_aws_secret):
-    print("-genConfigFile-")
-    try:
-
-        cfg.add_section('MongoDB Configuration')
-        db_url = db_url.replace('%', '%%')
-        cfg.add_section('WebUI Configuration')
-        port = (int(in_port))
-        cfg.add_section('M5Stack Configuration')
-        # client = pymongo.MongoClient(db_url, server_api=ServerApi('1'))
-
-    except Exception as e:
-        print("There was an issue generating configuration file. Message:")
-        print(e)
-        logger.exception("Configuration file generation error. " + str(e))
-        return False, e
-
-    cfg.set('MongoDB Configuration', 'client_connection', db_url)
-    cfg.set('WebUI Configuration', 'web_ui_port', str(port))
-    cfg.set('M5Stack Configuration', 'm5_aws_access', m5_aws_access)
-    cfg.set('M5Stack Configuration', 'm5_aws_secret', m5_aws_secret)
-    with open('KOAConsole.ini', 'w') as configfile:
-        print(cfg.write(configfile))
-        logger.info("Wrote configuration to KOAConsole.ini")
-    return True
-
-
+# Opens a configuration window via PySimpleGUI to select a configuration file.
 def openConfigurationFileSelection():
     print("-openConfigurationFileSelection-")
     logger.info("Opening configuration file selection window.")
@@ -133,6 +107,8 @@ def openConfigurationFileSelection():
                 configFile = values["-FOLDER-"]
 
                 shutil.copyfile(configFile, "KOAConsole.ini")
+                logger.info("-openConfigurationFileSelection- Copied selected configuration file to root directory as "
+                            "KOAConsole.ini")
                 with open("KOAConsole.ini", "r") as f:
                     read_data = f.read()
                     line = read_data.replace('%', "%%")
@@ -143,6 +119,8 @@ def openConfigurationFileSelection():
                     f.close()
             except Exception as e:
                 print("Error occurred with the selected ini file.")
+                logger.exception("-openConfigurationFileSelection- There was a critical error with the configuration "
+                                 "file selected. Exception: " + str(e))
                 print(e)
 
         if event == "SaveButton":
@@ -165,7 +143,8 @@ def openConfigurationFileSelection():
 
 clientPass = ""
 
-
+# Checks the configuration file for any missing entries and notifies the user if an invalid configuration file is
+# present.
 def checkConfig():
     try:
         print("-checkConfig-")
@@ -173,6 +152,14 @@ def checkConfig():
         print("Sections:", (cfg.sections()))
         portIn = (cfg.get('WebUI Configuration', "web_ui_port"))
         client_connection = (cfg.get("MongoDB Configuration", "client_connection"))
+        m5_aws_access = cfg.get("M5Stack Configuration", "m5_aws_access"),
+        m5_aws_secret = cfg.get("M5Stack Configuration", "m5_aws_secret"),
+        bucket_name = cfg.get("M5Stack Configuration", "bucket_name"),
+        refreshInterval = cfg.get("M5Stack Configuration", "refreshInterval"),
+        consumer_key = cfg.get("Twitter Configuration", "consumer_key"),
+        consumer_secret = cfg.get("Twitter Configuration", "consumer_secret"),
+        access_key = cfg.get("Twitter Configuration", "access_key"),
+        access_secret = cfg.get("Twitter Configuration", "access_secret"),
         print(client_connection, portIn)
         if not portIn:
             print("Port connection not found in configuration file.")
@@ -182,6 +169,46 @@ def checkConfig():
             print("Client connection not found in configuration file.")
             logger.error(
                 "-checkConfig- There was an issue with the configuration file: Mongo URI for ""client_connection"" not found or is invalid.")
+            return False
+        if not m5_aws_access:
+            print("M5 access key not found in configuration file.")
+            logger.error(
+                "-checkConfig- There was an issue with the configuration file: Entry for ""m5_aws_access"" not found or is invalid.")
+            return False
+        if not m5_aws_secret:
+            print("M5 secret key not found in configuration file.")
+            logger.error(
+                "-checkConfig- There was an issue with the configuration file: Entry for ""m5_aws_secret"" not found or is invalid.")
+            return False
+        if not bucket_name:
+            print("M5 AWS bucket name not found in configuration file.")
+            logger.error(
+                "-checkConfig- There was an issue with the configuration file: Entry for ""bucket_name"" not found or is invalid.")
+            return False
+        if not refreshInterval:
+            print("Job refresh interval not found in configuration file.")
+            logger.error(
+                "-checkConfig- There was an issue with the configuration file: Entry for ""refreshInterval"" not found or is invalid.")
+            return False
+        if not consumer_key:
+            print("Twitter API consumer key not found in configuration file.")
+            logger.error(
+                "-checkConfig- There was an issue with the configuration file: Entry for ""consumer_key"" not found or is invalid.")
+            return False
+        if not consumer_secret:
+            print("Twitter API consumer secret not found in configuration file.")
+            logger.error(
+                "-checkConfig- There was an issue with the configuration file: Entry for ""consumer_secret"" not found or is invalid.")
+            return False
+        if not access_key:
+            print("Twitter access key not found in configuration file.")
+            logger.error(
+                "-checkConfig- There was an issue with the configuration file: Entry for ""access_key"" not found or is invalid.")
+            return False
+        if not access_secret:
+            print("Twitter access secret not found in configuration file.")
+            logger.error(
+                "-checkConfig- There was an issue with the configuration file: Entry for ""access_secret"" not found or is invalid.")
             return False
     except Exception as e:
         print("There is an issue with the configuration file:", e)
@@ -193,6 +220,86 @@ def checkConfig():
     clientPass = client_connection
     print("Client connected:", client)
     return True
+
+
+# Generates a valid configuration file based upon the entered parameters.
+def genConfigFile(db_url, in_port, m5_aws_access, m5_aws_secret, bucketName, refreshInterval, consumer_key,
+                  consumer_secret, access_key, access_secret, callbackuri):
+    print("-genConfigFile-")
+    try:
+
+        cfg.add_section('MongoDB Configuration')
+        db_url = db_url.replace('%', '%%')
+        cfg.add_section('WebUI Configuration')
+        port = (int(in_port))
+        cfg.add_section('M5Stack Configuration')
+        # client = pymongo.MongoClient(db_url, server_api=ServerApi('1'))
+
+    except Exception as e:
+        print("There was an issue generating configuration file. Message:")
+        print(e)
+        logger.exception("Configuration file generation error. " + str(e))
+        return False, e
+
+    cfg.set('MongoDB Configuration', 'client_connection', db_url)
+    cfg.set('WebUI Configuration', 'web_ui_port', str(port))
+    cfg.set('M5Stack Configuration', 'm5_aws_access', m5_aws_access)
+    cfg.set('M5Stack Configuration', 'm5_aws_secret', m5_aws_secret)
+    cfg.set('M5Stack Configuration', 'bucket_name', bucketName)
+    cfg.set('Twitter Configuration', 'consumer_key', consumer_key)
+    cfg.set('Twitter Configuration', 'consumer_secret', consumer_secret)
+    cfg.set('Twitter Configuration', 'access_key', access_key)
+    cfg.set('Twitter Configuration', 'access_secret', access_secret)
+    cfg.set('Twitter Configuration', 'callback uri', callbackuri)
+    with open('KOAConsole.ini', 'w') as configfile:
+        print(cfg.write(configfile))
+        logger.info("Wrote configuration to KOAConsole.ini")
+    return True
+
+
+# Parses through the configuration file and initiates configuration check to validate configuration file.
+def parseConfiguration(cfgFile):
+    print("-parseConfiguration-")
+    try:
+
+        config = cfg.read(cfgFile)
+
+        configInput = [cfg.get("MongoDB Configuration", "client_connection"),
+                       cfg.get("WebUI Configuration", "web_ui_port"),
+                       cfg.get("M5Stack Configuration", "m5_aws_access"),
+                       cfg.get("M5Stack Configuration", "m5_aws_secret"),
+                       cfg.get("M5Stack Configuration", "bucket_name"),
+                       cfg.get("M5Stack Configuration", "refreshInterval"),
+                       cfg.get("Twitter Configuration", "consumer_key"),
+                       cfg.get("Twitter Configuration", "consumer_secret"),
+                       cfg.get("Twitter Configuration", "access_key"),
+                       cfg.get("Twitter Configuration", "access_secret"),
+                       ]
+        print("Configuration Read:", configInput)
+
+        if not config:
+            print("1")
+            logger.error(
+                "-parseConfiguration- There is an issue with the configuration file or none is present in root "
+                "directory. "
+                "Opening configuration prompt.")
+            configurator(False)
+        elif config and checkConfig():
+            print("2")
+        #  configurator(True)
+        else:
+            config = cfg.read('KOAConsole.ini')
+            logger.info("-parseConfiguration- Configuration file read.")
+            # cfg.get("client_connection", "web_ui_port")
+        return configInput
+    except Exception as e:
+        configurator(False)
+        print("There was an issue reading the configuration file. Error message:")
+        print(e)
+        logger.exception(
+            "-parseConfiguration- + Configuration parsing exception. Launching configurator. Exception: " + str(e))
+        # configurator(False)
+        return False, str(e)
 
 
 def startMongo(client_connection):
@@ -247,50 +354,6 @@ def logoGIF(address=None):
 @app.route('/getlogs/', methods=["GET"])
 def openLogScreen():
     return render_template("consoleLog_UI.html")
-
-
-# Parses through the configuration file and initiates configuration check to validate configuration file.
-def parseConfiguration(cfgFile):
-    print("-parseConfiguration-")
-    try:
-
-        config = cfg.read(cfgFile)
-
-        configInput = [cfg.get("MongoDB Configuration", "client_connection"),
-                       cfg.get("WebUI Configuration", "web_ui_port"),
-                       cfg.get("M5Stack Configuration", "m5_aws_access"),
-                       cfg.get("M5Stack Configuration", "m5_aws_secret"),
-                       cfg.get("M5Stack Configuration", "bucket_name"),
-                       cfg.get("M5Stack Configuration", "refreshInterval"),
-                       cfg.get("Twitter Configuration", "consumer_key"),
-                       cfg.get("Twitter Configuration", "consumer_secret"),
-                       cfg.get("Twitter Configuration", "access_key"),
-                       cfg.get("Twitter Configuration", "access_secret"),
-                       ]
-        print("Configuration Read:", configInput)
-
-        if not config:
-            print("1")
-            logger.error(
-                "-parseConfiguration- There is an issue with the configuration file or none is present in root directory. "
-                "Opening configuration prompt.")
-            configurator(False)
-        elif config and checkConfig():
-            print("2")
-        #  configurator(True)
-        else:
-            config = cfg.read('KOAConsole.ini')
-            logger.info("-parseConfiguration- Configuration file read.")
-            # cfg.get("client_connection", "web_ui_port")
-        return configInput
-    except Exception as e:
-        configurator(False)
-        print("There was an issue reading the configuration file. Error message:")
-        print(e)
-        logger.exception(
-            "-parseConfiguration- + Configuration parsing exception. Launching configurator. Exception: " + str(e))
-        # configurator(False)
-        return False, str(e)
 
 
 # Calculates the hash of the directory the python file is in.
@@ -630,12 +693,7 @@ def getAllSensorReadingLastThirtyMinutes():
             now = datetime.now()
             seconds_since_midnight = (now - now.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
             now = seconds_since_midnight
-            print("Now: ", now)
-            print("Reading Time: ", readingTime)
-            print("Getting difference.")
             duration = (now - readingTime)
-
-            print("Duration:", duration)
 
             if duration <= 1800:
                 sensorData.append({
@@ -699,7 +757,7 @@ def getCurrentUser():
 # Returns the current registered user utilizing the console.
 def getCurrentUser():
     print("-getCurrentUser-")
-    return _userName
+    return session["name"]
 
 
 # Salt hashes a plaint text password (str) using bcrypt's hashpw method.
