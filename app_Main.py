@@ -143,6 +143,7 @@ def openConfigurationFileSelection():
 
 clientPass = ""
 
+
 # Checks the configuration file for any missing entries and notifies the user if an invalid configuration file is
 # present.
 def checkConfig():
@@ -302,6 +303,7 @@ def parseConfiguration(cfgFile):
         return False, str(e)
 
 
+# Starts a MongoDB connection with the specified MongoDB URI parameter.
 def startMongo(client_connection):
     print("-startMongo-")
     try:
@@ -314,6 +316,7 @@ def startMongo(client_connection):
         return False, str(e)
 
 
+# Opens the configuration file selection screen if the file is not present or did not pass checks.
 def configurator(fileLocated):
     print("-configurator-")
 
@@ -326,6 +329,7 @@ def configurator(fileLocated):
         startMongo(clientPass)
 
 
+# Starts the MongoDB by utilizing startMongo whilst passing the MongoDB uri present in the configuration file.
 def startMongoNoCheck():
     print("-startMongoNoCheck-")
     logger.info("-startMongoNoCheck- Contacting MongoDB database.")
@@ -352,6 +356,7 @@ def logoGIF(address=None):
 
 
 @app.route('/getlogs/', methods=["GET"])
+# Redirects the user to the log's html page.
 def openLogScreen():
     return render_template("consoleLog_UI.html")
 
@@ -381,6 +386,8 @@ state_names = [state.name for state in us.states.STATES_AND_TERRITORIES]
 
 
 @app.route('/login/', methods=['POST'])
+# Verifies the user credentials with MongoDB.
+# Returns a boolean of True if verified, otherwise False.
 def verifyCredentials():
     print("-verifyCredentials-")
     try:
@@ -421,6 +428,7 @@ def verifyCredentials():
 
 
 @app.route("/logout")
+# Redirects user to the login page and clears out any current sessions.
 def logout():
     logger.info("-logout- User sign-out: " + session["name"])
     session["name"] = None
@@ -428,12 +436,14 @@ def logout():
 
 
 @app.route("/login/", methods=['GET'])
+# Redirects user to the login page.
 def openLoginScreen():
     session["name"] = None
     return redirect(url_for("index"))
 
 
 @app.route("/consoleAction/", methods=['POST'])
+# Processes any requests made from the console welcome screen.
 def proccessWelcomeAction():
     print("-proccessWelcomeAction-")
     # stationSelected = request.form[""]
@@ -486,6 +496,7 @@ def proccessWelcomeAction():
 
 
 @app.route("/modifyAction/", methods=['POST'])
+# Processes the user's request to modify a station with the specified parameters in the HTML fields.
 def processModifyAction():
     print("-processModifyAction-")
     try:
@@ -519,6 +530,7 @@ def processModifyAction():
 
 
 @app.route("/addAction/", methods=['POST'])
+# Processes the user's request to add a station with the specified parameters in the HTML fields.
 def processAddAction():
     try:
         stationName = request.form['name']
@@ -544,6 +556,7 @@ def processAddAction():
 
 
 @app.route("/register/", methods=['POST', 'GET'])
+# Registers a user with the MongoDB database.
 def registerUser():
     print("-registerUser-")
     regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
@@ -594,12 +607,14 @@ def openWelcomeScreen():
 
 
 @app.route("/getAllSensorReadings/", methods=['GET'])
+# Opens the sensor reading screens for all sensors.
 def openAllSensorsScreen():
     print("-openAllSensorsScreen-")
     return render_template('allSensorReadings_UI.html', stationReadings=getAllSensorReadings())
 
 
 @app.route("/getSensorReadings/", methods=['GET'])
+# Opens the sensor readings screen.
 def openSensorReadingScreen(station):
     print("-openAllSensorsScreen-")
     return render_template('sensorReadings_UI.html', stationReadings=getSensorReading(station))
@@ -617,6 +632,8 @@ def getSensors():
         return False, str(e)
 
 
+# Fetches all the readings of all M5 sensors from within the database.
+# Returns a list of the readings.
 def getAllSensorReadings():
     print("-getAllSensorReadings-")
     sensors = []
@@ -636,6 +653,8 @@ def getAllSensorReadings():
     return sensors2[::-1]
 
 
+# Fetches the readings for a specific M5 sensor from the MongoDB.
+# Returns a list with the parameters.
 def getSensorReading(sensor):
     print("-getSensorReading-")
 
@@ -659,22 +678,11 @@ def getSensorReading(sensor):
         return False
 
 
+# Gets the amount of seconds from a time string.
 def get_sec(time_str):
     """Get seconds from time."""
     h, m, s = time_str.split(':')
     return int(h) * 3600 + int(m) * 60 + int(s)
-
-
-def parse_prefix(line, fmt):
-    try:
-        t = time.strptime(line, fmt)
-    except ValueError as v:
-        if len(v.args) > 0 and v.args[0].startswith('unconverted data remains: '):
-            line = line[:-(len(v.args[0]) - 26)]
-            t = time.strptime(line, fmt)
-        else:
-            raise
-    return t
 
 
 # Fetches all the readings of the M5 sensors within the past 30 minutes from MongoDB and returns them as an array.
@@ -815,6 +823,7 @@ def getDocumentID(collectionName, fieldName, fieldEntry):
     return str(cursor["_id"])
 
 
+# Retrieves MongoDB document with the specified parameters within the database.
 def retrieveMongoDocument(collectionName, searchFieldName, searchFieldValue):
     print("Searching for", searchFieldName, "with a value of", searchFieldValue, "in collection",
           collectionName + ".")
@@ -822,6 +831,7 @@ def retrieveMongoDocument(collectionName, searchFieldName, searchFieldValue):
     return cursor
 
 
+# Pushes tweet if manually requested through the management console.
 def tweetConsolePush(station):
     stationReading = getSensorReading(station)[0]
     print(stationReading)
