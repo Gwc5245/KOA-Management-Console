@@ -116,7 +116,7 @@ def openConfigurationFileSelection():
         [sgd.Column(file_list_column)],
         # [sgd.Text('Username', size=(15, 1)), sgd.InputText('', key='Username')],
         [sgd.Button("Save", key='SaveButton')],
-        [sgd.Button("Discard")]
+        [sgd.Button("Discard", key="discard")]
     ]
     # window = sg.Window(title="KOA Management Console Login", layout=layout2, margins=(500, 500)).read()
 
@@ -129,14 +129,20 @@ def openConfigurationFileSelection():
         if event == "-FOLDER-":
             folder = values["-FOLDER-"]
             try:
-                # Get list of files in folder
-                # file_list = os.listdir(folder)
+
                 configFile = values["-FOLDER-"]
-                # configFile = configFile.replace('/', "")
-                # configFile = f'"{configFile}"'
+
                 shutil.copyfile(configFile, "KOAConsole.ini")
+                with open("KOAConsole.ini", "r") as f:
+                    read_data = f.read()
+                    line = read_data.replace('%', "%%")
+                    f.close()
+
+                with open("KOAConsole.ini", "w") as f:
+                    f.write(line)
+                    f.close()
             except Exception as e:
-                print("Error occured with the selected ini file.")
+                print("Error occurred with the selected ini file.")
                 print(e)
 
         if event == "SaveButton":
@@ -149,9 +155,12 @@ def openConfigurationFileSelection():
                 window.close()
             elif not configCheck:
                 window['validation'].update(
-                    value='Invalid configuration detected. \nPlease make sure all necessary fields are entered.', )
+                    value='Invalid configuration detected. \nPlease make sure all necessary fields are entered. '
+                          'Remember % signs have to be doubled.', )
                 logger.error("Invalid configuration detected. There may be a missing parameter or typo in "
                              "KOAConsole.ini.")
+        elif event == "discard":
+            window.close()
 
 
 clientPass = ""
@@ -644,7 +653,7 @@ def getAllSensorReadingLastThirtyMinutes():
         logger.exception(
             "-getAllSensorReadingLastThirtyMinutes- An error occurred while getting a sensor readings within last "
             "thirty minutes. Exception: " + str(e))
-        return False, e
+        return False, str(e)
 
 
 # Iterates through all the readings returned from getAllSensorReadingLastThirtyMinutes
@@ -922,7 +931,7 @@ def startAWSConnection():
         print("There was a critical error establishing AWS client connection. Exception: " + str(e))
         logger.exception(
             "-startAWSConnection- There was a critical error establishing AWS client connection. Exception: " + str(e))
-        return False, e
+        return False, str(e)
 
 
 # variable used to keep track of how many items (stored sensor readings) are in bucket
@@ -941,7 +950,7 @@ def getSensorReadingsFromAWS():
         print("There was a critical error fetching sensor readings from AWS bucket. Exception: " + str(e))
         logger.exception("-getSensorReadingsFromAWS- There was a critical error fetching sensor readings from AWS "
                          "bucket. Exception: " + str(e))
-        return False, e
+        return False, str(e)
 
 
 # Inserts sensor data retrieve from getSensorReadingsFromAWS function into MongoDB collection.
@@ -965,7 +974,7 @@ def depositSensorData():
         print("There was a critical issue depositing sensor data from AWS bucket. Exception: " + str(e))
         logger.exception("-depositSensorData- There was a critical issue depositing sensor data from AWS bucket. "
                          "Exception: " + str(e))
-        return False, e
+        return False, str(e)
 
 
 if __name__ == "__main__":
