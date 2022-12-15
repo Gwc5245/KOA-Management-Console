@@ -53,7 +53,7 @@ Then run the Python app.<br>
 ##### A program log will be stored in the \static folder for reference.
 ----
 
-A valid MongoDB is required, with KOADB being the database cluster utilized by the program and the follow collections need to be present:
+A valid MongoDB is required, with KOADB being the database cluster utilized by the program and the following collections need to be present:
 
 - ManagementUsers
 - WeatherStationData
