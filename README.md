@@ -2,6 +2,7 @@
 This program utilizes both PySimpleGUI and Flask for its UI components.<br>
 Flask: https://palletsprojects.com/p/flask/<br>
 PySimpleGUI: https://github.com/PySimpleGUI/PySimpleGUI#installing-- <br>
+Python v3.11: https://www.python.org/downloads/release/python-3110/ <br>
 
 In order for the app to work you will need to set up a configuration file with the valid credentials. 
 Example template:
