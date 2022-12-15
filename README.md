@@ -36,8 +36,8 @@ callback uri = twitter callback uri <br>
 Upon running the Flask server for the first time you will be prompted to select a valid configuration file. If any of the parameters are missing it will not accept that configuration file. The program will make a copy of the configuration file that you selected and will format it accordingly so it can be parsed by Python. Formatting is especially crucial for the MongoDB URI.
 
 ### Deployment
-To deploy the project first run startApp.bat, this will install all of the required Python modules for the program to function.
-If you are running on a non-Windows system, you can deploy the app with these commands:
+To deploy the project first run startApp.bat, this will install all of the required Python modules for the program to function.<br>
+<br>If you are running on a non-Windows system, you can deploy the app with these commands:
 
 First install the required modules.<br>
 pip install -r requirements.txt
