@@ -40,7 +40,7 @@ Then run the Python app.
 "python" .\app_main.py"
   
 ----
-A program log will be stored in the \static folder for reference.
+##### A program log will be stored in the \static folder for reference.
 ----
 
 A valid MongoDB is required, with KOADB being the database cluster utilized by the program and the follow collections need to be present:
