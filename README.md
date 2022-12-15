@@ -3,9 +3,12 @@ This program utilizes both PySimpleGUI and Flask for its UI components.<br>
 Flask: https://palletsprojects.com/p/flask/<br>
 PySimpleGUI: https://github.com/PySimpleGUI/PySimpleGUI#installing-- <br>
 Python v3.11: https://www.python.org/downloads/release/python-3110/ <br>
+M5Stack: https://m5stack.com/ <br>
+M5Stack ENV III: https://shop.m5stack.com/products/env-iii-unit-with-temperature-humidity-air-pressure-sensor-sht30-qmp6988 <br>
 
-In order for the app to work you will need to set up a configuration file with the valid credentials. 
-Example template:
+In order for the app to work you will need to set up a configuration file with the valid credentials. <br>
+
+Example configuration file template:
 ----
 [MongoDB Configuration] <br>
 client_connection = mongodb+srv://--AWS access key--:--AWS secret key--@--your cluster--.mongodb.net/?authSource=%24external&authMechanism=MONGODB-AWS&retryWrites=true <br>
