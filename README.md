@@ -35,10 +35,10 @@ Upon running the Flask server for the first time you will be prompted to select 
 To deploy the project first run startApp.bat, this will install all of the required Python modules for the program to function.
 If you are running on a non-Windows system, you can deploy the app with these commands:
 
-First install the required modules.
+First install the required modules.<br>
 pip install -r requirements.txt
 
-Then run the Python app.
+Then run the Python app.<br>
 "python" .\app_main.py"
   
 ----
