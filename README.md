@@ -1,5 +1,6 @@
 # KOA-Management-Console
-This program utilizes both PySimpleGUI and Flask for its UI components.<br>
+This program utilizes both PySimpleGUI and Flask for its UI components.The M5Stack and ENV III sensor are used for reading weather conditions.<br>
+
 Flask: https://palletsprojects.com/p/flask/<br>
 PySimpleGUI: https://github.com/PySimpleGUI/PySimpleGUI#installing-- <br>
 Python v3.11: https://www.python.org/downloads/release/python-3110/ <br>
