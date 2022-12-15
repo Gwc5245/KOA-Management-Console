@@ -5,26 +5,26 @@
 In order for the app to work you will need to set up a configuration file with the valid credentials. 
 Example template:
 ----
-[MongoDB Configuration]
-client_connection = mongodb+srv://<AWS access key>:<AWS secret key>@cluster0.re3ie7p.mongodb.net/?authSource=%24external&authMechanism=MONGODB-AWS&retryWrites=true
+[MongoDB Configuration] <br>
+client_connection = mongodb+srv://<AWS access key>:<AWS secret key>@cluster0.re3ie7p.mongodb.net/?authSource=%24external&authMechanism=MONGODB-AWS&retryWrites=true <br>
                              
 
-[WebUI Configuration]
-web_ui_port = port number for Flask to run on.
+[WebUI Configuration] <br>
+web_ui_port = port number for Flask to run on. <br>
 
-[M5Stack Configuration]
-m5_aws_access = AWS access key
-m5_aws_secret = AWS secret key
-bucket_name = AWS m5 bucket name
-refreshInterval = # of seconds
-#refreshInterval is in seconds.
+[M5Stack Configuration] <br>
+m5_aws_access = AWS access key <br>
+m5_aws_secret = AWS secret key <br>
+bucket_name = AWS m5 bucket name <br>
+refreshInterval = # of seconds <br>
+#refreshInterval is in seconds. <br>
 
-[Twitter Configuration]
-consumer_key = Twitter API consumer key
-consumer_secret = Twitter API consumer secret
-access_key = Twitter OAuth access key
-access_secret = Twitter OAuth access secret
-callback uri = twitter callback uri
+[Twitter Configuration] <br>
+consumer_key = Twitter API consumer key <br>
+consumer_secret = Twitter API consumer secret <br>
+access_key = Twitter OAuth access key <br>
+access_secret = Twitter OAuth access secret <br>
+callback uri = twitter callback uri <br>
 
 ----
 Upon running the Flask server for the first time you will be prompted to select a valid configuration file. If any of the parameters are missing it will not accept that configuration file. The program will make a copy of the configuration file that you selected and will format it accordingly so it can be parsed by Python. Formatting is especially crucial for the MongoDB URI.
@@ -38,6 +38,7 @@ pip install -r requirements.txt
 
 Then run the Python app.
 "python" .\app_main.py"
+  
 ----
 A program log will be stored in the \static folder for reference.
 ----
