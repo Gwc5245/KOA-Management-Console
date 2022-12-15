@@ -6,7 +6,7 @@ In order for the app to work you will need to set up a configuration file with t
 Example template:
 ----
 [MongoDB Configuration] <br>
-client_connection = mongodb+srv://<AWS access key>:<AWS secret key>@--your cluster--.mongodb.net/?authSource=%24external&authMechanism=MONGODB-AWS&retryWrites=true <br>
+client_connection = mongodb+srv://--AWS access key--:--AWS secret key--@--your cluster--.mongodb.net/?authSource=%24external&authMechanism=MONGODB-AWS&retryWrites=true <br>
                              
 
 [WebUI Configuration] <br>
