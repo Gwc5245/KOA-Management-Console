@@ -53,3 +53,6 @@ A valid MongoDB is required, with KOADB being the database cluster utilized by t
 
 Note that the MongoDB URI we have in the template is utilizing AWS IAM. You can find a guide on setting that up here:
 https://www.mongodb.com/docs/atlas/security/passwordless-authentication/
+
+MongoDB offers a free hosting service for personal use. You can create your own free cluster here:
+https://www.mongodb.com/cloud/atlas/register
