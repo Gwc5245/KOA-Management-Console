@@ -7,6 +7,7 @@ Python v3.11: https://www.python.org/downloads/release/python-3110/ <br>
 M5Stack: https://m5stack.com/ <br>
 M5Stack ENV III: https://shop.m5stack.com/products/env-iii-unit-with-temperature-humidity-air-pressure-sensor-sht30-qmp6988 <br>
 
+----
 In order for the app to work you will need to set up a configuration file with the valid credentials. <br>
 
 Example configuration file template:
